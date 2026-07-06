@@ -1,0 +1,176 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codeplay — Write, run, repeat</title>
+<meta name="description" content="Codeplay is a live front-end playground: HTML, CSS and JS editors with instant sandboxed preview, console capture, autosave, templates and shareable export.">
+<meta property="og:title" content="Codeplay"><meta property="og:description" content="Write, run, repeat.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#101014;--surface:#17171e;--surface-2:#1f1f29;
+ --border:#2a2a38;--border-hi:#3d3d52;
+ --text:#eaeaf2;--text-2:#9494ab;--text-3:#585870;
+ --html:#ff6b4a;--css:#38bdf8;--js:#facc15;
+ --run:#4ade80;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.14s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--js);outline-offset:2px;border-radius:4px}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{font-weight:800;font-size:15.5px}
+.logo em{font-style:normal;color:var(--js)}
+.spacer{flex:1}
+.btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);border-radius:9px;padding:8px 14px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;transition:all var(--t)}
+.btn:hover{color:var(--text);border-color:var(--border-hi)}
+.btn.run{background:var(--run);border-color:var(--run);color:#04260d;font-weight:800}
+.btn.run:hover{filter:brightness(1.1)}
+select.btn{appearance:auto}
+.main{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+@media(max-width:760px){.main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.editors{display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
+.etabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
+.etab{border:none;background:none;color:var(--text-3);font-family:var(--mono);font-size:12px;font-weight:600;padding:10px 18px;cursor:pointer;border-bottom:2px solid transparent;transition:all var(--t);display:flex;gap:7px;align-items:center}
+.etab .dot{width:7px;height:7px;border-radius:50%}
+.etab[data-l=html] .dot{background:var(--html)}
+.etab[data-l=css] .dot{background:var(--css)}
+.etab[data-l=js] .dot{background:var(--js)}
+.etab.on{color:var(--text);border-bottom-color:var(--js)}
+.epanes{flex:1;position:relative;min-height:0}
+textarea.code{position:absolute;inset:0;width:100%;height:100%;background:var(--bg);border:none;outline:none;resize:none;padding:16px;color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.7;tab-size:2;display:none;white-space:pre;overflow:auto}
+textarea.code.on{display:block}
+.right{display:flex;flex-direction:column;min-width:0;min-height:0}
+.pv-head{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text-3)}
+.pv-head .dots{display:flex;gap:5px}
+.pv-head .dots i{width:9px;height:9px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border-hi)}
+iframe{flex:1;border:none;background:#fff;min-height:0}
+.console{height:130px;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column}
+.c-head{display:flex;align-items:center;padding:6px 14px;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;font-weight:700;border-bottom:1px solid var(--border)}
+.c-head button{margin-left:auto;background:none;border:none;color:var(--text-3);cursor:pointer;font-size:11px;font-family:var(--font)}
+.c-head button:hover{color:var(--text)}
+.c-body{flex:1;overflow-y:auto;padding:8px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.8}
+.c-line{border-bottom:1px solid rgba(42,42,56,.5);padding:2px 0}
+.c-line.err{color:#ff7b72}
+.c-line.warn{color:var(--js)}
+.c-line .badge{color:var(--text-3);margin-right:8px}
+</style></head><body>
+<header class="topbar">
+ <span class="logo">▶ Code<em>play</em></span>
+ <select class="btn" id="tpl" aria-label="Templates">
+  <option value="">Templates…</option>
+  <option value="hello">Hello world</option>
+  <option value="clock">Animated clock</option>
+  <option value="particles">Canvas particles</option>
+  <option value="form">Styled form</option>
+ </select>
+ <span class="spacer"></span>
+ <button class="btn" id="dlBtn">⬇ Export HTML</button>
+ <button class="btn run" id="runBtn">▶ Run (⌘↵)</button>
+</header>
+<div class="main">
+ <div class="editors">
+  <div class="etabs">
+   <button class="etab on" data-l="html"><span class="dot"></span>HTML</button>
+   <button class="etab" data-l="css"><span class="dot"></span>CSS</button>
+   <button class="etab" data-l="js"><span class="dot"></span>JS</button>
+  </div>
+  <div class="epanes">
+   <textarea class="code on" id="e-html" spellcheck="false" aria-label="HTML editor"></textarea>
+   <textarea class="code" id="e-css" spellcheck="false" aria-label="CSS editor"></textarea>
+   <textarea class="code" id="e-js" spellcheck="false" aria-label="JS editor"></textarea>
+  </div>
+ </div>
+ <div class="right">
+  <div class="pv-head"><span class="dots"><i></i><i></i><i></i></span>preview — sandboxed iframe</div>
+  <iframe id="frame" sandbox="allow-scripts" title="Preview"></iframe>
+  <div class="console">
+   <div class="c-head">Console<button onclick="clearCon()">clear</button></div>
+   <div class="c-body" id="cbody"></div>
+  </div>
+ </div>
+</div>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TPLS={
+hello:{html:'<h1>Hello, world! 👋</h1>\n<p>Edit me and press Run.</p>',
+css:'body {\n  font-family: system-ui, sans-serif;\n  display: grid;\n  place-items: center;\n  min-height: 100vh;\n  background: linear-gradient(135deg, #667eea, #764ba2);\n  color: #fff;\n  text-align: center;\n}',
+js:'console.log("Playground ready!");'},
+clock:{html:'<div id="clock">00:00:00</div>',
+css:'body {\n  display: grid;\n  place-items: center;\n  min-height: 100vh;\n  background: #0d1117;\n}\n#clock {\n  font: 700 64px monospace;\n  color: #4ade80;\n  text-shadow: 0 0 30px #4ade8088;\n}',
+js:'setInterval(() => {\n  document.getElementById("clock").textContent =\n    new Date().toLocaleTimeString();\n}, 1000);'},
+particles:{html:'<canvas id="cv"></canvas>',
+css:'body { margin: 0; overflow: hidden; background: #000; }\ncanvas { display: block; }',
+js:'const cv = document.getElementById("cv");\nconst ctx = cv.getContext("2d");\ncv.width = innerWidth; cv.height = innerHeight;\nconst pts = Array.from({length: 80}, () => ({\n  x: Math.random() * cv.width,\n  y: Math.random() * cv.height,\n  vx: (Math.random() - .5) * 2,\n  vy: (Math.random() - .5) * 2\n}));\n(function loop() {\n  ctx.fillStyle = "rgba(0,0,0,.1)";\n  ctx.fillRect(0, 0, cv.width, cv.height);\n  ctx.fillStyle = "#38bdf8";\n  for (const p of pts) {\n    p.x += p.vx; p.y += p.vy;\n    if (p.x < 0 || p.x > cv.width) p.vx *= -1;\n    if (p.y < 0 || p.y > cv.height) p.vy *= -1;\n    ctx.beginPath();\n    ctx.arc(p.x, p.y, 3, 0, 7);\n    ctx.fill();\n  }\n  requestAnimationFrame(loop);\n})();'},
+form:{html:'<form>\n  <h2>Sign up</h2>\n  <input placeholder="Email" type="email">\n  <input placeholder="Password" type="password">\n  <button>Create account</button>\n</form>',
+css:'body {\n  display: grid;\n  place-items: center;\n  min-height: 100vh;\n  background: #f4f5f7;\n  font-family: system-ui, sans-serif;\n}\nform {\n  background: #fff;\n  padding: 34px;\n  border-radius: 16px;\n  box-shadow: 0 10px 40px rgba(0,0,0,.1);\n  display: grid;\n  gap: 12px;\n  width: 300px;\n}\ninput {\n  padding: 12px;\n  border: 1.5px solid #ddd;\n  border-radius: 9px;\n}\nbutton {\n  padding: 12px;\n  border: none;\n  border-radius: 9px;\n  background: #4f46e5;\n  color: #fff;\n  font-weight: 700;\n  cursor: pointer;\n}',
+js:'document.querySelector("form").onsubmit = e => {\n  e.preventDefault();\n  console.log("Form submitted!");\n};'}};
+/* tabs */
+document.querySelectorAll('.etab').forEach(t=>t.onclick=()=>{
+ document.querySelectorAll('.etab').forEach(x=>x.classList.toggle('on',x===t));
+ document.querySelectorAll('.code').forEach(x=>x.classList.remove('on'));
+ $('e-'+t.dataset.l).classList.add('on');
+ $('e-'+t.dataset.l).focus();});
+/* tab-key indentation in editors */
+document.querySelectorAll('.code').forEach(ta=>{
+ ta.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){e.preventDefault();
+   const s=ta.selectionStart;
+   ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(ta.selectionEnd);
+   ta.selectionStart=ta.selectionEnd=s+2;}});
+ ta.addEventListener('input',autosave);});
+/* run */
+function run(){
+ clearCon();
+ const html=$('e-html').value,css=$('e-css').value,js=$('e-js').value;
+ const doc='<!DOCTYPE html><html><head><style>'+css+'</style></head><body>'+html+
+ '<script>(function(){const send=(t,a)=>parent.postMessage({codeplay:1,t,m:a.map(x=>{try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(" ")},"*");'+
+ 'console.log=(...a)=>send("log",a);console.warn=(...a)=>send("warn",a);console.error=(...a)=>send("err",a);'+
+ 'window.onerror=(m,s,l)=>{send("err",[m+" (line "+l+")"]);};})();<\/script>'+
+ '<script>try{'+js+'}catch(e){console.error(e.message)}<\/script></body></html>';
+ $('frame').srcdoc=doc;}
+addEventListener('message',e=>{
+ if(!e.data||!e.data.codeplay)return;
+ const d=document.createElement('div');
+ d.className='c-line '+(e.data.t==='err'?'err':e.data.t==='warn'?'warn':'');
+ d.innerHTML='<span class="badge">'+(e.data.t==='err'?'✕':e.data.t==='warn'?'⚠':'›')+'</span>'+esc(e.data.m);
+ $('cbody').appendChild(d);
+ $('cbody').scrollTop=$('cbody').scrollHeight;});
+function clearCon(){$('cbody').innerHTML='';}
+$('runBtn').onclick=run;
+addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();run();}});
+/* templates */
+$('tpl').onchange=()=>{
+ const t=TPLS[$('tpl').value];
+ if(!t)return;
+ $('e-html').value=t.html;$('e-css').value=t.css;$('e-js').value=t.js;
+ $('tpl').value='';autosave();run();};
+/* autosave */
+let saveT;
+function autosave(){clearTimeout(saveT);
+ saveT=setTimeout(()=>__LS.setItem('codeplay',JSON.stringify({
+  html:$('e-html').value,css:$('e-css').value,js:$('e-js').value})),500);}
+/* export */
+$('dlBtn').onclick=()=>{
+ const doc='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Codeplay export</title><style>'+
+ $('e-css').value+'</style></head><body>'+$('e-html').value+
+ '<script>'+$('e-js').value+'<\/script></body></html>';
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([doc],{type:'text/html'}));
+ a.download='codeplay-export.html';a.click();};
+/* boot */
+try{const d=JSON.parse(__LS.getItem('codeplay'));
+ if(d&&(d.html||d.css||d.js)){$('e-html').value=d.html;$('e-css').value=d.css;$('e-js').value=d.js;}
+ else throw 0;}
+catch(e){const t=TPLS.hello;
+ $('e-html').value=t.html;$('e-css').value=t.css;$('e-js').value=t.js;}
+run();
+</script></body></html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foliogen — Your portfolio, minus the weekend</title>
+<meta name="description" content="Foliogen turns a short form into a polished developer portfolio: live preview, 6 curated themes, device toggle, and a clean downloadable HTML file.">
+<meta property="og:title" content="Foliogen"><meta property="og:description" content="Your portfolio, minus the weekend.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0e0e13;--bg-2:#14141b;--surface:#1a1a24;--surface-2:#222230;
+ --border:#2a2a3a;--border-hi:#3d3d52;
+ --text:#f0f0f5;--text-2:#9c9cb0;--text-3:#5e5e75;
+ --primary:#f97316;--primary-dim:rgba(249,115,22,.13);
+ --radius:10px;--radius-lg:16px;
+ --font:'Inter',system-ui,sans-serif;--display:'Sora',sans-serif;
+ --t:.16s cubic-bezier(.4,0,.2,1);
+ --shadow:0 20px 60px rgba(0,0,0,.5);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+.topbar{display:flex;align-items:center;gap:12px;padding:13px max(18px,2.5vw);border-bottom:1px solid var(--border);background:var(--bg-2)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;font-family:var(--display);letter-spacing:-.02em}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#ef4444);display:grid;place-items:center;font-size:13px;color:#fff}
+.spacer{flex:1}
+.device{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.device button{background:none;border:none;color:var(--text-3);padding:8px 13px;font-size:13px;cursor:pointer;transition:all var(--t)}
+.device button.on{background:var(--surface-2);color:var(--text)}
+.dl{background:linear-gradient(90deg,var(--primary),#ef4444);border:none;border-radius:var(--radius);color:#fff;font-family:var(--font);font-weight:700;font-size:13px;padding:10px 18px;cursor:pointer;transition:all var(--t)}
+.dl:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(249,115,22,.35)}
+.main{flex:1;display:grid;grid-template-columns:360px 1fr;overflow:hidden}
+@media(max-width:860px){.main{grid-template-columns:1fr;overflow-y:auto}.canvas{min-height:70vh}}
+/* form */
+.form{overflow-y:auto;padding:22px;border-right:1px solid var(--border);background:var(--bg-2)}
+.sec{margin-bottom:22px}
+.sec-h{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.sec-h .ln{flex:1;height:1px;background:var(--border)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--text-2);margin-bottom:5px}
+.field input,.field textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text);padding:10px 13px;font-size:13.5px;font-family:var(--font);outline:none;transition:all var(--t)}
+.field input:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.field textarea{height:64px;resize:vertical}
+.themes{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.th{aspect-ratio:1;border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all var(--t);position:relative}
+.th:hover{transform:scale(1.08)}
+.th.on{border-color:#fff;box-shadow:0 0 0 3px var(--primary-dim)}
+.th.on::after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.fonts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fbtn{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text-2);padding:10px;cursor:pointer;font-size:13px;transition:all var(--t);text-align:center}
+.fbtn.on{border-color:var(--primary);color:var(--text);background:var(--primary-dim)}
+/* canvas */
+.canvas{background:var(--bg);display:flex;align-items:flex-start;justify-content:center;padding:26px;overflow-y:auto;
+ background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:22px 22px}
+.frame{width:100%;max-width:680px;transition:max-width .4s cubic-bezier(.4,0,.2,1);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);animation:frameIn .5s cubic-bezier(.2,.8,.3,1)}
+@keyframes frameIn{from{opacity:0;transform:translateY(20px) scale(.98)}}
+.frame.mobile{max-width:390px}
+/* generated preview */
+.pv-hero{padding:52px 42px 44px;color:#fff;position:relative;overflow:hidden}
+.pv-hero .blob{position:absolute;width:280px;height:280px;border-radius:50%;filter:blur(70px);opacity:.4;right:-60px;top:-80px}
+.pv-hero h2{font-size:30px;font-weight:800;letter-spacing:-.03em;position:relative}
+.pv-hero .role{font-size:15px;margin-top:6px;font-weight:600;position:relative}
+.pv-hero p{margin-top:12px;opacity:.85;line-height:1.65;font-size:14px;max-width:480px;position:relative}
+.pv-body{background:#fff;color:#1c1c28;padding:36px 42px}
+.frame.mobile .pv-hero,.frame.mobile .pv-body{padding-left:26px;padding-right:26px}
+.pv-h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#9c9cb0;margin:26px 0 12px}
+.pv-h3:first-child{margin-top:0}
+.pv-skill{display:inline-block;padding:6px 14px;border-radius:18px;font-size:12.5px;font-weight:600;margin:3px;color:#fff}
+.pv-pj{padding:16px;border:1px solid #ececf2;border-radius:14px;margin-bottom:10px;transition:all .2s}
+.pv-pj:hover{transform:translateX(4px)}
+.pv-pj b{font-size:15px;letter-spacing:-.01em}
+.pv-pj p{font-size:13px;color:#66667a;margin-top:4px;line-height:1.55}
+.pv-contact{display:flex;gap:10px;flex-wrap:wrap}
+.pv-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:12px;background:#f4f4f8;font-size:13px;font-weight:600;color:#1c1c28}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,90px);background:var(--surface);border:1px solid var(--primary);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);z-index:99}
+.toast.show{transform:translate(-50%,0)}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">◈</span>Foliogen</span>
+ <span class="spacer"></span>
+ <div class="device"><button class="on" id="dDesk" aria-label="Desktop preview">🖥</button><button id="dMob" aria-label="Mobile preview">📱</button></div>
+ <button class="dl" onclick="download()">↓ Download site</button>
+</header>
+<div class="main">
+ <aside class="form">
+  <div class="sec"><div class="sec-h">Identity<span class="ln"></span></div>
+   <div class="field"><label>Full name</label><input id="f-name" value="Anuj Yadav"></div>
+   <div class="field"><label>Role / title</label><input id="f-role" value="Electronics & Embedded Systems Student"></div>
+   <div class="field"><label>Short bio</label><textarea id="f-bio">B.Sc. (Hons.) Electronics student at Delhi University who loves building things with circuits and code.</textarea></div>
+  </div>
+  <div class="sec"><div class="sec-h">Skills<span class="ln"></span></div>
+   <div class="field"><label>Comma separated</label><input id="f-skills" value="Python, C++, Arduino, AVR, SQL, JavaScript"></div>
+  </div>
+  <div class="sec"><div class="sec-h">Projects<span class="ln"></span></div>
+   <div class="field"><label>Project 1 — name | description</label><input id="f-p1" value="Smart Home System | Arduino-based automation with sensors, LCD and password entry"></div>
+   <div class="field"><label>Project 2</label><input id="f-p2" value="Data Structures in Python | Stacks, queues and trees implemented from scratch"></div>
+   <div class="field"><label>Project 3</label><input id="f-p3" placeholder="Name | description"></div>
+  </div>
+  <div class="sec"><div class="sec-h">Experience / timeline<span class="ln"></span></div>
+   <div class="field"><label>Entry 1 — year | title</label><input id="f-x1" value="2024 | Started B.Sc. Electronics @ DU"></div>
+   <div class="field"><label>Entry 2</label><input id="f-x2" value="2025 | Built Smart Home Automation project"></div>
+   <div class="field"><label>Entry 3</label><input id="f-x3" placeholder="Year | milestone"></div>
+  </div>
+  <div class="sec"><div class="sec-h">Contact<span class="ln"></span></div>
+   <div class="field"><label>Email</label><input id="f-email" value="yadavdm2005@gmail.com"></div>
+   <div class="field"><label>GitHub</label><input id="f-git" value="github.com/virtualYadav"></div>
+   <div class="field"><label>LinkedIn (optional)</label><input id="f-li" placeholder="linkedin.com/in/you"></div>
+  </div>
+  <div class="sec"><div class="sec-h">Theme<span class="ln"></span></div>
+   <div class="themes" id="themes"></div>
+  </div>
+  <div class="sec"><div class="sec-h">Heading font<span class="ln"></span></div>
+   <div class="fonts">
+    <button class="fbtn on" id="fSans" style="font-family:Inter">Modern Sans</button>
+    <button class="fbtn" id="fSerif" style="font-family:Georgia">Classic Serif</button>
+   </div>
+  </div>
+ </aside>
+ <section class="canvas"><div class="frame" id="frame"></div></section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const THEMES=[
+ ['#0a192f','#64ffda','Midnight Mint'],['#1e1b4b','#a78bfa','Violet Night'],
+ ['#052e16','#4ade80','Forest'],['#450a0a','#fb7185','Crimson'],
+ ['#0c4a6e','#38bdf8','Ocean'],['#1c1917','#f97316','Ember']];
+let theme=0,serif=false;
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const V=id=>$(id).value;
+/* theme swatches */
+THEMES.forEach((t,i)=>{const d=document.createElement('button');
+ d.className='th'+(i===0?' on':'');d.title=t[2];d.setAttribute('aria-label',t[2]);
+ d.style.background='linear-gradient(135deg,'+t[0]+' 55%,'+t[1]+')';
+ d.onclick=()=>{theme=i;document.querySelectorAll('.th').forEach((x,j)=>x.classList.toggle('on',j===i));render();};
+ $('themes').appendChild(d);});
+$('fSans').onclick=()=>{serif=false;$('fSans').classList.add('on');$('fSerif').classList.remove('on');render();};
+$('fSerif').onclick=()=>{serif=true;$('fSerif').classList.add('on');$('fSans').classList.remove('on');render();};
+$('dDesk').onclick=()=>{$('frame').classList.remove('mobile');$('dDesk').classList.add('on');$('dMob').classList.remove('on');};
+$('dMob').onclick=()=>{$('frame').classList.add('mobile');$('dMob').classList.add('on');$('dDesk').classList.remove('on');};
+function data(){
+ return {name:V('f-name')||'Your Name',role:V('f-role'),bio:V('f-bio'),
+ skills:V('f-skills').split(',').map(s=>s.trim()).filter(Boolean),
+ pjs:['f-p1','f-p2','f-p3'].map(V).filter(p=>p.includes('|')).map(p=>p.split('|').map(x=>x.trim())),
+ xp:['f-x1','f-x2','f-x3'].map(V).filter(p=>p.includes('|')).map(p=>p.split('|').map(x=>x.trim())),
+ email:V('f-email'),git:V('f-git'),li:V('f-li')};}
+function inner(d){
+ const [bg,ac]=THEMES[theme];
+ const hf=serif?'Georgia,serif':"'Sora','Inter',sans-serif";
+ return '<div class="pv-hero" style="background:'+bg+'">'+
+ '<div class="blob" style="background:'+ac+'"></div>'+
+ '<h2 style="font-family:'+hf+'">'+esc(d.name)+'</h2>'+
+ '<div class="role" style="color:'+ac+'">'+esc(d.role)+'</div>'+
+ '<p>'+esc(d.bio)+'</p></div>'+
+ '<div class="pv-body">'+
+ '<div class="pv-h3">Skills</div>'+d.skills.map(s=>'<span class="pv-skill" style="background:'+bg+'">'+esc(s)+'</span>').join('')+
+ '<div class="pv-h3">Projects</div>'+(d.pjs.length?d.pjs.map(p=>'<div class="pv-pj" style="border-left:3px solid '+ac+'"><b>'+esc(p[0])+'</b><p>'+esc(p[1]||'')+'</p></div>').join(''):'<p style="color:#9c9cb0;font-size:13px">Add projects on the left…</p>')+
+ (d.xp.length?'<div class="pv-h3">Timeline</div>'+d.xp.map(x=>'<div style="display:flex;gap:14px;padding:7px 0;border-left:2px solid '+ac+';padding-left:14px;margin-left:4px"><b style="color:'+bg+';min-width:44px">'+esc(x[0])+'</b><span style="font-size:13.5px;color:#44444f">'+esc(x[1]||'')+'</span></div>').join(''):'')+
+ '<div class="pv-h3">Contact</div><div class="pv-contact">'+
+ (d.email?'<span class="pv-chip">✉️ '+esc(d.email)+'</span>':'')+
+ (d.git?'<span class="pv-chip">🐙 '+esc(d.git)+'</span>':'')+
+ (d.li?'<span class="pv-chip">💼 '+esc(d.li)+'</span>':'')+'</div></div>';}
+function render(){$('frame').innerHTML=inner(data());}
+document.querySelectorAll('.form input,.form textarea').forEach(el=>el.addEventListener('input',render));
+function download(){
+ const d=data();const [bg,ac]=THEMES[theme];
+ const hf=serif?'Georgia,serif':"'Sora',sans-serif";
+ const doc='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+ '<title>'+esc(d.name)+' — Portfolio</title>'+
+ '<meta name="description" content="'+esc(d.bio.slice(0,150))+'"><meta property="og:title" content="'+esc(d.name)+'"><meta property="og:description" content="'+esc(d.role)+'">'+
+ '<script type="application/ld+json">'+JSON.stringify({'@context':'https://schema.org','@type':'Person',name:d.name,jobTitle:d.role,email:d.email})+'</'+'script>'+
+ '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">'+
+ '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#f4f4f8;padding:34px 14px}'+
+ '.sheet{max-width:660px;margin:0 auto;border-radius:18px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.16)}'+
+ '.pv-hero{padding:52px 42px 44px;color:#fff;position:relative;overflow:hidden}.pv-hero .blob{position:absolute;width:280px;height:280px;border-radius:50%;filter:blur(70px);opacity:.4;right:-60px;top:-80px}'+
+ '.pv-hero h2{font-size:30px;font-weight:800;letter-spacing:-.03em;position:relative}.pv-hero .role{font-size:15px;margin-top:6px;font-weight:600;position:relative}'+
+ '.pv-hero p{margin-top:12px;opacity:.85;line-height:1.65;font-size:14px;position:relative}'+
+ '.pv-body{background:#fff;color:#1c1c28;padding:36px 42px}.pv-h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#9c9cb0;margin:26px 0 12px}.pv-h3:first-child{margin-top:0}'+
+ '.pv-skill{display:inline-block;padding:6px 14px;border-radius:18px;font-size:12.5px;font-weight:600;margin:3px;color:#fff}'+
+ '.pv-pj{padding:16px;border:1px solid #ececf2;border-radius:14px;margin-bottom:10px}.pv-pj b{font-size:15px}.pv-pj p{font-size:13px;color:#66667a;margin-top:4px;line-height:1.55}'+
+ '.pv-contact{display:flex;gap:10px;flex-wrap:wrap}.pv-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:12px;background:#f4f4f8;font-size:13px;font-weight:600}'+
+ '@media(max-width:600px){.pv-hero,.pv-body{padding-left:24px;padding-right:24px}}</style></head>'+
+ '<body><div class="sheet">'+inner(d).replaceAll(hf,hf)+'</div></body></html>';
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([doc],{type:'text/html'}));
+ a.download=(d.name||'portfolio').toLowerCase().replace(/\s+/g,'-')+'-portfolio.html';a.click();
+ toast('Portfolio downloaded 🎉 — open it in any browser');}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+ clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+render();
+</script></body></html>

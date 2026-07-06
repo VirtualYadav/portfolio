@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TypeSprint — How fast are your fingers?</title>
+<meta name="description" content="TypeSprint is a minimal, keyboard-first typing test: live WPM, accuracy, error heatmap, personal-best tracking and progress history. No signup, no clutter.">
+<meta property="og:title" content="TypeSprint"><meta property="og:description" content="How fast are your fingers?">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#101014;--surface:#17171d;--surface-2:#1f1f28;
+ --border:#28283400;--border-v:#282834;
+ --text:#e8e8ef;--text-2:#8f8fa3;--text-3:#4e4e60;
+ --gold:#e2b714;--gold-dim:rgba(226,183,20,.12);
+ --error:#ca4754;--success:#4cbf7a;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.15s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 16px 50px;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{width:100%;max-width:860px;display:flex;align-items:center;gap:12px;padding:20px 0}
+.logo{font-weight:800;font-size:17px;letter-spacing:-.02em;display:flex;gap:8px;align-items:center}
+.logo b{color:var(--gold)}
+.spacer{flex:1}
+.pb{font-size:12px;color:var(--text-2);font-family:var(--mono)}
+.pb b{color:var(--gold)}
+.modes{display:flex;gap:6px;background:var(--surface);border-radius:10px;padding:5px;margin-bottom:34px}
+.mode{border:none;background:none;color:var(--text-3);font-family:var(--mono);font-size:12.5px;padding:7px 14px;border-radius:7px;cursor:pointer;transition:all var(--t)}
+.mode:hover{color:var(--text-2)}
+.mode.on{background:var(--surface-2);color:var(--gold)}
+.stage{width:100%;max-width:860px;position:relative}
+.hud{display:flex;gap:26px;font-family:var(--mono);font-size:15px;color:var(--gold);height:28px;margin-bottom:10px}
+.hud span{opacity:0;transition:opacity .3s}
+.hud.live span{opacity:1}
+.words{font-family:var(--mono);font-size:clamp(17px,2.6vw,23px);line-height:1.9;color:var(--text-3);height:calc(3em*1.9);overflow:hidden;user-select:none;cursor:text;position:relative;word-break:break-word}
+.words.blur{filter:blur(6px);opacity:.5}
+.focus-note{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:14px;color:var(--text-2);z-index:2}
+.words.blur+.focus-note{display:flex}
+.ch{transition:color .05s}
+.ch.ok{color:var(--text)}
+.ch.bad{color:var(--error);text-decoration:underline}
+.caret{display:inline-block;width:2px;margin:0 -1px;background:var(--gold);animation:blink 1s step-end infinite;height:1.1em;vertical-align:text-bottom}
+@keyframes blink{50%{opacity:0}}
+.restart{display:block;margin:30px auto 0;background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer;padding:10px;border-radius:10px;transition:all var(--t)}
+.restart:hover{color:var(--text);transform:rotate(90deg)}
+.hint{text-align:center;color:var(--text-3);font-size:11.5px;font-family:var(--mono);margin-top:6px}
+.kbd{border:1px solid var(--border-v);border-radius:4px;padding:1px 6px;font-size:10.5px}
+/* results */
+.results{display:none;width:100%;max-width:860px;animation:pop .4s cubic-bezier(.2,.9,.3,1.15)}
+.results.show{display:block}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px}
+.res-card{background:var(--surface);border-radius:14px;padding:20px;text-align:center}
+.res-card small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+.res-card b{display:block;font-size:34px;font-weight:800;color:var(--gold);letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
+.res-card.sm b{font-size:22px}
+.panel{background:var(--surface);border-radius:14px;padding:20px;margin-bottom:14px}
+.panel h3{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.spark{display:flex;align-items:flex-end;gap:4px;height:64px}
+.spark div{flex:1;background:var(--gold);opacity:.8;border-radius:3px 3px 0 0;min-height:3px}
+.missed{display:flex;gap:8px;flex-wrap:wrap}
+.mk{font-family:var(--mono);font-size:13px;background:var(--surface-2);border-radius:8px;padding:6px 12px;color:var(--error)}
+.mk small{color:var(--text-3)}
+.newpb{text-align:center;color:var(--gold);font-weight:800;font-size:15px;margin-bottom:14px;animation:pop .5s .2s backwards}
+input.ghost{position:absolute;opacity:0;left:-9999px;width:10px;height:10px}
+</style></head><body>
+<header class="topbar">
+ <span class="logo">⌨ Type<b>Sprint</b></span>
+ <span class="spacer"></span>
+ <span class="pb" id="pb"></span>
+</header>
+<div class="modes" id="modes" role="tablist">
+ <button class="mode" data-s="15">15s</button>
+ <button class="mode on" data-s="30">30s</button>
+ <button class="mode" data-s="60">60s</button>
+ <button class="mode" data-m="quotes">quotes</button>
+ <button class="mode" data-m="code">code</button>
+</div>
+<div class="stage" id="stage">
+ <div class="hud" id="hud"><span id="h-time">30</span><span id="h-wpm">0 wpm</span><span id="h-acc">100%</span></div>
+ <div class="words blur" id="words" aria-label="Typing area"></div>
+ <div class="focus-note">click here or press any key to focus</div>
+ <input class="ghost" id="ghost" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type here">
+</div>
+<div class="results" id="results"></div>
+<button class="restart" id="restart" title="Restart (Tab)" aria-label="Restart">↻</button>
+<p class="hint"><span class="kbd">tab</span> restart · <span class="kbd">esc</span> reset</p>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const COMMON='the of and to in is you that it he was for on are as with his they at be this have from or one had by word but not what all were we when your can said there use an each which she do how their if will up other about out many then them these so some her would make like him into time has look two more write go see number way could people my than first been call who oil its now find long down day did get come made may part over new sound take only little work know place year live me back give most very after thing our just name good sentence man think say great where help through much before line right too mean old any same tell boy follow came want show also around form three small set put end does another well large must big even such because turn here why ask went men read need land different home us move try kind hand picture again change off play spell air away animal house point page letter mother answer found study still learn should world high every near add food between own below country plant last school father keep tree never start city earth eye light thought head under story saw left few while along might close something seem next hard open example begin life always those both paper together got group often run'.split(' ');
+const QUOTES=['The only way to do great work is to love what you do.','Simplicity is the ultimate sophistication.','First, solve the problem. Then, write the code.','Programs must be written for people to read, and only incidentally for machines to execute.','The best error message is the one that never shows up.','Talk is cheap. Show me the code.'];
+const CODE=['for (let i = 0; i < n; i++) { sum += arr[i]; }','const data = await fetch(url).then(r => r.json());','if (!user) throw new Error("not found");','function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }','const unique = [...new Set(items)].sort();','document.querySelector("#app").classList.toggle("dark");'];
+let mode='time',secs=30,target='',pos=0,started=0,timer=null,errs=0,total=0,missKeys={},wpmSeries=[],done=false;
+let hist=[];try{hist=JSON.parse(__LS.getItem('typesprint')||'[]')}catch(e){}
+function pbShow(){const best=Math.max(0,...hist.map(h=>h.wpm));
+ $('pb').innerHTML=hist.length?('personal best <b>'+best+' wpm</b> · '+hist.length+' tests'):'no tests yet';}
+function genText(){
+ if(mode==='quotes')return QUOTES[Math.floor(Math.random()*QUOTES.length)];
+ if(mode==='code')return CODE[Math.floor(Math.random()*CODE.length)];
+ const out=[];for(let i=0;i<90;i++)out.push(COMMON[Math.floor(Math.random()*COMMON.length)]);
+ return out.join(' ');}
+function reset(){
+ clearInterval(timer);timer=null;started=0;pos=0;errs=0;total=0;missKeys={};wpmSeries=[];done=false;
+ target=genText();
+ $('results').classList.remove('show');
+ $('hud').classList.remove('live');
+ $('h-time').textContent=mode==='time'?secs:'∞';
+ $('h-wpm').textContent='0 wpm';$('h-acc').textContent='100%';
+ render();}
+function render(){
+ const w=$('words');let html='';
+ for(let i=0;i<target.length;i++){
+  if(i===pos)html+='<span class="caret"></span>';
+  const c=target[i]===' '?'&nbsp;':target[i].replace(/</g,'&lt;');
+  html+='<span class="ch'+(i<pos?(marks[i]?' bad':' ok'):'')+'">'+c+'</span>';}
+ if(pos>=target.length)html+='<span class="caret"></span>';
+ w.innerHTML=html;
+ const caret=w.querySelector('.caret');
+ if(caret){const lh=parseFloat(getComputedStyle(w).lineHeight);
+  w.scrollTop=Math.max(0,caret.offsetTop-lh);}}
+let marks={};
+function key(ch){
+ if(done)return;
+ if(!started){started=Date.now();$('hud').classList.add('live');
+  timer=setInterval(tick,1000);}
+ total++;
+ if(ch===target[pos]){marks[pos]=0;}
+ else{marks[pos]=1;errs++;
+  const k=target[pos]===' '?'␣':target[pos];
+  missKeys[k]=(missKeys[k]||0)+1;}
+ pos++;
+ if(pos>=target.length){
+  if(mode==='time'){target+=' '+genText();}
+  else finish();}
+ render();}
+function back(){if(done||pos===0)return;pos--;delete marks[pos];render();}
+function tick(){
+ const el=(Date.now()-started)/1000;
+ const wpm=Math.round((pos-errsIn())/5/(el/60));
+ wpmSeries.push(Math.max(0,wpm));
+ $('h-wpm').textContent=Math.max(0,wpm)+' wpm';
+ $('h-acc').textContent=(total?Math.round((total-errs)/total*100):100)+'%';
+ if(mode==='time'){
+  const left=secs-Math.floor(el);
+  $('h-time').textContent=Math.max(0,left);
+  if(left<=0)finish();}}
+function errsIn(){let e=0;for(const k in marks)if(marks[k]&&+k<pos)e++;return e;}
+function finish(){
+ done=true;clearInterval(timer);
+ const el=Math.max(1,(Date.now()-started)/1000);
+ const wpm=Math.max(0,Math.round((pos-errsIn())/5/(el/60)));
+ const acc=total?Math.round((total-errs)/total*100):100;
+ const best=Math.max(0,...hist.map(h=>h.wpm));
+ hist.unshift({wpm,acc,mode:mode==='time'?secs+'s':mode,d:Date.now()});
+ hist=hist.slice(0,30);__LS.setItem('typesprint',JSON.stringify(hist));pbShow();
+ const missed=Object.entries(missKeys).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ const mx=Math.max(1,...wpmSeries);
+ $('results').innerHTML=
+ (wpm>best&&hist.length>1?'<div class="newpb">🏆 New personal best!</div>':'')+
+ '<div class="res-grid">'+
+ '<div class="res-card"><small>wpm</small><b>'+wpm+'</b></div>'+
+ '<div class="res-card"><small>accuracy</small><b>'+acc+'%</b></div>'+
+ '<div class="res-card sm"><small>characters</small><b>'+pos+'</b></div>'+
+ '<div class="res-card sm"><small>errors</small><b style="color:var(--error)">'+errs+'</b></div></div>'+
+ '<div class="panel"><h3>wpm over time</h3><div class="spark">'+
+ wpmSeries.map(v=>'<div style="height:'+Math.max(4,v/mx*100)+'%"></div>').join('')+'</div></div>'+
+ (missed.length?'<div class="panel"><h3>trouble keys</h3><div class="missed">'+
+  missed.map(([k,n])=>'<span class="mk">'+k.replace(/</g,'&lt;')+' <small>×'+n+'</small></span>').join('')+'</div></div>':'')+
+ (hist.length>1?'<div class="panel"><h3>last '+Math.min(15,hist.length)+' tests</h3><div class="spark">'+
+  hist.slice(0,15).reverse().map(h=>'<div style="height:'+Math.max(4,h.wpm/Math.max(1,...hist.map(x=>x.wpm))*100)+'%" title="'+h.wpm+' wpm"></div>').join('')+'</div></div>':'');
+ $('results').classList.add('show');}
+/* input handling */
+const ghost=$('ghost');
+function focusIn(){ghost.focus();$('words').classList.remove('blur');}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.mode,.restart'))focusIn();});
+ghost.addEventListener('blur',()=>$('words').classList.add('blur'));
+ghost.addEventListener('focus',()=>$('words').classList.remove('blur'));
+/* mobile/touch keyboards deliver text via input events, not keydown */
+ghost.addEventListener('input',()=>{
+ const v=ghost.value;
+ if(v){for(const ch of v)key(ch);ghost.value='';}});
+ghost.addEventListener('keydown',e=>{
+ if(e.key==='Backspace'){e.preventDefault();back();}});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Tab'){e.preventDefault();reset();focusIn();return;}
+ if(e.key==='Escape'){reset();return;}
+ if(document.activeElement!==ghost){
+  if(e.key.length===1)focusIn();else return;}
+ if(e.key==='Backspace'){e.preventDefault();back();return;}
+ if(e.key.length===1){e.preventDefault();key(e.key);}});
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.mode').forEach(x=>x.classList.remove('on'));
+ b.classList.add('on');
+ if(b.dataset.s){mode='time';secs=+b.dataset.s;}
+ else mode=b.dataset.m;
+ reset();focusIn();});
+$('restart').onclick=()=>{reset();focusIn();};
+pbShow();reset();
+</script></body></html>

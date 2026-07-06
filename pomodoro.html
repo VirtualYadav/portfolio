@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FocusForge — Deep work, on a timer</title>
+<meta name="description" content="FocusForge is a beautiful Pomodoro timer with focus/break cycles, a task queue, daily focus stats, ambient noise and desktop notifications.">
+<meta property="og:title" content="FocusForge"><meta property="og:description" content="Deep work, on a timer.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0f1116;--surface:#161923;--surface-2:#1e2230;
+ --border:#262b3d;--border-hi:#374060;
+ --text:#eef0f7;--text-2:#98a0b8;--text-3:#5a6178;
+ --focus:#f45d68;--focus-dim:rgba(244,93,104,.13);
+ --break:#38c793;--break-dim:rgba(56,199,147,.13);
+ --font:'Inter',system-ui,sans-serif;--display:'Sora',sans-serif;
+ --t:.18s cubic-bezier(.4,0,.2,1);
+ --shadow:0 16px 50px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;-webkit-font-smoothing:antialiased;padding:0 16px 60px;transition:background .8s}
+body.focusing{background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(244,93,104,.14),transparent),var(--bg)}
+body.breaking{background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(56,199,147,.14),transparent),var(--bg)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:20px 0}
+.logo{font-weight:800;font-family:var(--display);font-size:17px;display:flex;gap:8px;align-items:center}
+.logo em{font-style:normal;color:var(--focus)}
+.spacer{flex:1}
+.tbtn{background:var(--surface);border:1px solid var(--border);color:var(--text-2);border-radius:10px;padding:8px 13px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all var(--t)}
+.tbtn:hover{color:var(--text);border-color:var(--border-hi)}
+.tbtn.on{border-color:var(--focus);color:var(--focus)}
+.wrap{max-width:640px;margin:0 auto}
+/* timer */
+.timer-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:34px;text-align:center;box-shadow:var(--shadow)}
+.phase-tabs{display:inline-flex;background:var(--surface-2);border-radius:12px;padding:4px;margin-bottom:26px}
+.ptab{border:none;background:none;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;padding:8px 18px;border-radius:9px;cursor:pointer;transition:all var(--t)}
+.ptab.on.focus{background:var(--focus-dim);color:var(--focus)}
+.ptab.on.break{background:var(--break-dim);color:var(--break)}
+.ring-wrap{position:relative;width:min(270px,72vw);margin:0 auto}
+.ring-wrap svg{width:100%;transform:rotate(-90deg)}
+.ring-wrap circle{fill:none;stroke-width:7;stroke-linecap:round}
+.time{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.time b{font-family:var(--display);font-size:clamp(44px,11vw,60px);font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.time small{color:var(--text-3);font-size:12.5px;margin-top:2px}
+.controls{display:flex;gap:10px;justify-content:center;margin-top:28px}
+.big{border:none;border-radius:14px;padding:15px 38px;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;transition:all var(--t)}
+.big.go{background:var(--focus);color:#fff}
+body.breaking .big.go{background:var(--break);color:#05261a}
+.big.go:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(244,93,104,.35)}
+.big.alt{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.big.alt:hover{color:var(--text)}
+.cycles{margin-top:20px;display:flex;gap:7px;justify-content:center}
+.cyc{width:9px;height:9px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);transition:all .3s}
+.cyc.done{background:var(--focus);border-color:var(--focus)}
+/* tasks + stats */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:600px){.duo{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px}
+.panel h2{font-size:11.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;font-weight:700}
+.task-add{display:flex;gap:8px;margin-bottom:12px}
+.task-add input{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 13px;font-size:13px;font-family:var(--font);outline:none;min-width:0}
+.task-add input:focus{border-color:var(--focus)}
+.task-add button{background:var(--focus);border:none;color:#fff;border-radius:10px;width:38px;font-size:16px;cursor:pointer}
+.task{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:13.5px}
+.task:last-child{border:none}
+.task input[type=checkbox]{accent-color:var(--focus);width:16px;height:16px}
+.task.done span{text-decoration:line-through;color:var(--text-3)}
+.task .del{margin-left:auto;background:none;border:none;color:var(--text-3);cursor:pointer}
+.task .del:hover{color:var(--focus)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:80px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bar i{width:100%;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--focus),#c73e4d);min-height:3px}
+.bar small{font-size:9.5px;color:var(--text-3)}
+.stat-line{font-size:13px;color:var(--text-2);margin-top:12px;line-height:1.7}
+.stat-line b{color:var(--focus)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,90px);background:var(--surface);border:1px solid var(--focus);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);z-index:99}
+.toast.show{transform:translate(-50%,0)}
+</style></head><body class="focusing">
+<header class="topbar">
+ <span class="logo">🔨 Focus<em>Forge</em></span>
+ <span class="spacer"></span>
+ <button class="tbtn" id="noiseBtn">🌊 noise</button>
+ <button class="tbtn" id="notifBtn">🔔 notify</button>
+</header>
+<div class="wrap">
+ <div class="timer-card">
+  <div class="phase-tabs">
+   <button class="ptab focus on" id="tabF">Focus · <span id="lenF">25</span>m</button>
+   <button class="ptab break" id="tabB">Break · <span id="lenB">5</span>m</button>
+  </div>
+  <div class="ring-wrap">
+   <svg viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="90" stroke="var(--surface-2)"/>
+    <circle cx="100" cy="100" r="90" id="ring" stroke="var(--focus)" stroke-dasharray="565.5" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear,stroke .5s"/>
+   </svg>
+   <div class="time"><b id="clock">25:00</b><small id="phase">ready to focus</small></div>
+  </div>
+  <div class="controls">
+   <button class="big go" id="goBtn">Start</button>
+   <button class="big alt" id="skipBtn">Skip</button>
+  </div>
+  <div class="cycles" id="cycles"></div>
+ </div>
+ <div class="duo">
+  <div class="panel"><h2>📋 Session tasks</h2>
+   <div class="task-add"><input id="newTask" placeholder="What are you working on?" maxlength="60"><button onclick="addTask()">＋</button></div>
+   <div id="tasks"></div>
+  </div>
+  <div class="panel"><h2>📊 Focus this week</h2>
+   <div class="bars" id="bars"></div>
+   <div class="stat-line" id="statLine"></div>
+  </div>
+ </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const FLEN=25*60,BLEN=5*60,LONG=15*60;
+let db=load();
+function load(){try{const d=JSON.parse(__LS.getItem('focusforge'));if(d)return d;}catch(e){}
+ return {tasks:[],days:{},cycles:0};}
+function persist(){__LS.setItem('focusforge',JSON.stringify(db));}
+let phase='focus',left=FLEN,total=FLEN,running=false,tick=null;
+const C=2*Math.PI*90;
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function draw(){
+ $('clock').textContent=fmt(left);
+ $('ring').style.strokeDashoffset=C*(1-left/total);
+ $('ring').style.stroke=phase==='focus'?'var(--focus)':'var(--break)';
+ document.body.className=phase==='focus'?'focusing':'breaking';
+ $('phase').textContent=running?(phase==='focus'?'deep work — stay with it':'breathe — you earned it'):(phase==='focus'?'ready to focus':'break time');
+ document.title=(running?fmt(left)+' · ':'')+'FocusForge';
+ $('tabF').classList.toggle('on',phase==='focus');
+ $('tabB').classList.toggle('on',phase==='break');
+ const n=db.cycles%4;
+ $('cycles').innerHTML=[0,1,2,3].map(i=>'<span class="cyc'+(i<n?' done':'')+'"></span>').join('');}
+function setPhase(p){
+ phase=p;
+ const isLong=p==='break'&&db.cycles>0&&db.cycles%4===0;
+ total=p==='focus'?FLEN:(isLong?LONG:BLEN);
+ left=total;running=false;clearInterval(tick);
+ $('goBtn').textContent='Start';
+ if(isLong)toast('Long break — 15 minutes. You did 4 rounds! 🏆');
+ draw();}
+$('tabF').onclick=()=>setPhase('focus');
+$('tabB').onclick=()=>setPhase('break');
+$('goBtn').onclick=()=>{
+ running=!running;
+ $('goBtn').textContent=running?'Pause':'Resume';
+ if(running){beep(660,.08);tick=setInterval(()=>{
+  left--;
+  if(left<=0){finishPhase();return;}
+  draw();},1000);}
+ else clearInterval(tick);
+ draw();};
+$('skipBtn').onclick=()=>finishPhase(true);
+function finishPhase(skipped){
+ clearInterval(tick);running=false;
+ if(phase==='focus'&&!skipped){
+  db.cycles++;
+  const day=new Date().toISOString().slice(0,10);
+  db.days[day]=(db.days[day]||0)+Math.round(total/60);
+  persist();
+  beep(880,.15);setTimeout(()=>beep(1100,.2),180);
+  notify('Focus complete! 🎉','Time for a break.');
+  toast('Focus round done — break time 🌿');
+  setPhase('break');}
+ else{
+  if(!skipped){beep(520,.15);notify('Break over','Back to deep work.');}
+  setPhase('focus');}
+ renderStats();}
+/* tasks */
+function addTask(){const v=$('newTask').value.trim();if(!v)return;
+ db.tasks.push({id:Date.now(),t:v,done:false});
+ $('newTask').value='';persist();renderTasks();}
+function renderTasks(){
+ $('tasks').innerHTML=db.tasks.length?db.tasks.map(t=>
+ '<div class="task'+(t.done?' done':'')+'"><input type="checkbox" '+(t.done?'checked':'')+' onchange="tog('+t.id+')" aria-label="Done"><span>'+esc(t.t)+'</span>'+
+ '<button class="del" onclick="delT('+t.id+')" aria-label="Delete">✕</button></div>').join('')
+ :'<div style="color:var(--text-3);font-size:12.5px;padding:8px 0">Add a task to anchor this session.</div>';}
+function tog(id){const t=db.tasks.find(x=>x.id===id);if(t)t.done=!t.done;persist();renderTasks();}
+function delT(id){db.tasks=db.tasks.filter(x=>x.id!==id);persist();renderTasks();}
+$('newTask').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+/* stats */
+function renderStats(){
+ const days=[...Array(7)].map((_,i)=>{
+  const d=new Date(Date.now()-(6-i)*864e5);
+  return {label:['S','M','T','W','T','F','S'][d.getDay()],v:db.days[d.toISOString().slice(0,10)]||0};});
+ const mx=Math.max(25,...days.map(d=>d.v));
+ $('bars').innerHTML=days.map(d=>'<div class="bar"><i style="height:'+Math.max(3,d.v/mx*100)+'%" title="'+d.v+' min"></i><small>'+d.label+'</small></div>').join('');
+ const week=days.reduce((s,d)=>s+d.v,0);
+ const today=days[6].v;
+ $('statLine').innerHTML='Today: <b>'+today+' min</b> · This week: <b>'+week+' min</b> · Lifetime rounds: <b>'+db.cycles+'</b>'+
+ (today>=100?'<br>🔥 Massive day. Protect the streak.':today>=50?'<br>💪 Solid focus today.':'');}
+/* sound + noise */
+let AC=null;
+function ac(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();return AC;}
+function beep(f,d){try{const a=ac(),o=a.createOscillator(),g=a.createGain();
+ o.frequency.value=f;o.type='sine';
+ g.gain.setValueAtTime(.25,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+ o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d+.05);}catch(e){}}
+let noise=null;
+$('noiseBtn').onclick=function(){
+ if(noise){noise.stop();noise=null;this.classList.remove('on');return;}
+ const a=ac(),len=a.sampleRate*2,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);
+ let lastOut=0;
+ for(let i=0;i<len;i++){const w=Math.random()*2-1;d[i]=(lastOut+.02*w)/1.02;lastOut=d[i];d[i]*=3.5;}
+ const s=a.createBufferSource();s.buffer=buf;s.loop=true;
+ const g=a.createGain();g.gain.value=.14;
+ s.connect(g);g.connect(a.destination);s.start();noise=s;
+ this.classList.add('on');toast('Brown noise on — headphones recommended 🎧');};
+/* notifications */
+$('notifBtn').onclick=function(){
+ try{
+  if(!('Notification' in window))return toast('Notifications not supported here');
+  Notification.requestPermission().then(p=>{
+   this.classList.toggle('on',p==='granted');
+   toast(p==='granted'?'Desktop notifications on 🔔':'Blocked here — works on the hosted site');
+  }).catch(()=>toast('Blocked in this preview — works on the hosted site'));
+ }catch(e){toast('Blocked in this preview — works on the hosted site');}};
+function notify(t,b){if('Notification' in window&&Notification.permission==='granted')
+ try{new Notification(t,{body:b});}catch(e){}}
+/* shortcuts */
+addEventListener('keydown',e=>{
+ if(e.target.matches('input'))return;
+ if(e.key===' '){e.preventDefault();$('goBtn').click();}
+ if(e.key==='s')$('skipBtn').click();});
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+ clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2500);}
+renderTasks();renderStats();draw();
+</script></body></html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Convertly — Drop. Convert. Done.</title>
+<meta name="description" content="Convertly converts images (PNG/JPG/WebP) and text files (MD→HTML, JSON→CSV) entirely in your browser — with live preview, quality control and batch history.">
+<meta property="og:title" content="Convertly"><meta property="og:description" content="Drop. Convert. Done.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0e1420;--bg-2:#131a2a;--surface:#1a2334;--surface-2:#223048;
+ --border:#2b3a52;--border-hi:#3d5271;
+ --text:#eef3fa;--text-2:#93a5bd;--text-3:#586a84;
+ --teal:#14d3b2;--teal-dim:rgba(20,211,178,.12);
+ --blue:#3d9bff;--success:#4ade80;--error:#f87171;
+ --radius:12px;--radius-lg:18px;
+ --font:'Inter',system-ui,sans-serif;
+ --t:.16s cubic-bezier(.4,0,.2,1);
+ --shadow:0 16px 50px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;padding-bottom:60px;
+background-image:radial-gradient(ellipse 55% 35% at 50% -5%,rgba(20,211,178,.1),transparent)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px max(20px,3vw)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.02em}
+.logo .mark{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-size:13px;color:#04231d}
+.private{font-size:11px;color:var(--teal);background:var(--teal-dim);padding:3px 11px;border-radius:12px;font-weight:600}
+.spacer{flex:1}
+.wrap{max-width:640px;margin:0 auto;padding:10px max(16px,3vw)}
+.hero{text-align:center;padding:16px 0 24px}
+.hero h1{font-size:clamp(25px,4.5vw,34px);font-weight:800;letter-spacing:-.035em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--teal),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--text-2);margin-top:6px}
+/* drop zone */
+.drop{position:relative;border:2px dashed var(--border-hi);border-radius:var(--radius-lg);padding:48px 24px;text-align:center;cursor:pointer;transition:all .25s cubic-bezier(.2,.8,.3,1);background:var(--bg-2)}
+.drop:hover,.drop.over{border-color:var(--teal);background:var(--teal-dim);transform:scale(1.01)}
+.drop .big{font-size:42px;margin-bottom:10px;transition:transform .25s}
+.drop.over .big{transform:translateY(-6px) scale(1.15)}
+.drop b{font-size:15.5px}
+.drop p{color:var(--text-3);font-size:12.5px;margin-top:6px}
+.fmt-tags{display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.ftag{font-size:10.5px;background:var(--surface);border:1px solid var(--border);color:var(--text-3);padding:4px 11px;border-radius:12px;font-weight:600}
+/* file card */
+.fcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-top:16px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.fcard.show{display:block;animation:pop .35s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}}
+.f-h{display:flex;align-items:center;gap:13px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.f-ic{width:42px;height:42px;border-radius:11px;background:var(--surface-2);display:grid;place-items:center;font-size:19px}
+.f-info{flex:1;min-width:0}
+.f-info b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-info small{color:var(--text-3);font-size:11.5px}
+.f-x{background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:6px;border-radius:6px}
+.f-x:hover{color:var(--error)}
+img.prev{max-width:100%;max-height:240px;display:block;margin:16px auto;border-radius:var(--radius)}
+.f-b{padding:18px 20px}
+.lbl{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:block}
+.fmts{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:16px}
+.fmt{border:1.5px solid var(--border);background:var(--bg-2);border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;transition:all var(--t);color:var(--text-2);font-weight:600;font-size:13px}
+.fmt:hover{border-color:var(--border-hi)}
+.fmt.on{border-color:var(--teal);background:var(--teal-dim);color:var(--teal)}
+.qrow{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.qrow label{font-size:12.5px;color:var(--text-2);white-space:nowrap}
+.qrow b{color:var(--teal);font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--teal)}
+.go{width:100%;padding:15px;border:none;border-radius:var(--radius);background:linear-gradient(90deg,var(--teal),var(--blue));color:#04231d;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;transition:all var(--t)}
+.go:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(20,211,178,.3);filter:brightness(1.05)}
+.go:disabled{opacity:.5;cursor:wait;transform:none}
+.savings{text-align:center;font-size:12px;color:var(--success);margin-top:10px;min-height:16px}
+/* history */
+.h2{font-size:11.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;margin:24px 0 10px}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hitem{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 15px;font-size:12.5px;animation:pop .3s backwards}
+.hitem .arrow{color:var(--teal);font-weight:700}
+.hitem small{color:var(--text-3);margin-left:auto}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,90px);background:var(--surface);border:1px solid var(--teal);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);z-index:99}
+.toast.show{transform:translate(-50%,0)}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">⇄</span>Convertly</span>
+ <span class="private">🔒 converts on your device</span>
+ <span class="spacer"></span>
+</header>
+<div class="wrap">
+ <div class="hero"><h1>Drop. Convert. <em>Done.</em></h1>
+ <p>Images and text files, converted instantly — nothing ever uploaded.</p></div>
+ <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose or drop a file">
+  <div class="big">📥</div><b>Drop your file here</b>
+  <p>or click to browse — max ~50 MB</p>
+  <div class="fmt-tags">
+   <span class="ftag">PNG</span><span class="ftag">JPG</span><span class="ftag">WebP</span><span class="ftag">GIF</span>
+   <span class="ftag">TXT</span><span class="ftag">MD</span><span class="ftag">CSV</span><span class="ftag">JSON</span></div>
+ </div>
+ <input type="file" id="file" hidden accept="image/*,.txt,.md,.csv,.json">
+ <div class="fcard" id="fcard">
+  <div class="f-h">
+   <div class="f-ic" id="fic">🖼</div>
+   <div class="f-info"><b id="fname"></b><small id="fmeta"></small></div>
+   <button class="f-x" onclick="reset()" aria-label="Remove file">✕</button>
+  </div>
+  <img class="prev" id="prev" style="display:none" alt="Preview">
+  <div class="f-b">
+   <span class="lbl">Convert to</span>
+   <div class="fmts" id="fmts"></div>
+   <div class="qrow" id="qrow" style="display:none">
+    <label>Quality <b id="qv">90%</b></label>
+    <input type="range" id="q" min="10" max="100" value="90" aria-label="Quality">
+   </div>
+   <div class="qrow" id="rsrow" style="display:none">
+    <label>Resize <b id="rsv">100%</b></label>
+    <input type="range" id="rs" min="10" max="100" value="100" aria-label="Resize">
+   </div>
+   <div class="qrow" id="wmrow" style="display:none">
+    <label>Watermark</label>
+    <input id="wm" placeholder="© your name (optional)" style="flex:1;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;font-size:12.5px;font-family:var(--font);outline:none">
+   </div>
+   <button class="go" id="go" onclick="convert()">⚡ Convert & download</button>
+   <div class="savings" id="savings"></div>
+  </div>
+ </div>
+ <div class="h2" id="histH" style="display:none">Recent conversions</div>
+ <div class="hist" id="hist"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let FILE=null,IMG=null,TEXT='',isImg=false,target='';
+const drop=$('drop'),file=$('file');
+drop.onclick=()=>file.click();
+drop.onkeydown=e=>{if(e.key==='Enter')file.click();};
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+document.addEventListener('drop',e=>{if(e.dataTransfer.files[0])load(e.dataTransfer.files[0]);});
+file.onchange=()=>{if(file.files[0])load(file.files[0]);};
+const IMG_FMTS=[['image/png','PNG'],['image/jpeg','JPG'],['image/webp','WebP']];
+const TXT_FMTS=[['txt','TXT'],['html','HTML'],['json','JSON'],['csv','CSV']];
+function load(f){
+ FILE=f;isImg=f.type.startsWith('image/');
+ $('fcard').classList.add('show');
+ $('fname').textContent=f.name;
+ $('fmeta').textContent=fmtSize(f.size)+' · '+(f.type||'text file');
+ $('fic').textContent=isImg?'🖼':'📄';
+ $('savings').textContent='';
+ const F=$('fmts');F.innerHTML='';
+ (isImg?IMG_FMTS:TXT_FMTS).forEach(([v,l],i)=>{
+  const b=document.createElement('button');b.className='fmt'+(i===0?' on':'');b.textContent=l;
+  b.onclick=()=>{target=v;document.querySelectorAll('.fmt').forEach(x=>x.classList.toggle('on',x===b));
+   $('qrow').style.display=isImg&&v!=='image/png'?'flex':'none';
+   $('rsrow').style.display=isImg?'flex':'none';
+   $('wmrow').style.display=isImg?'flex':'none';};
+  F.appendChild(b);});
+ target=isImg?'image/png':'txt';
+ $('qrow').style.display='none';
+ $('rsrow').style.display=isImg?'flex':'none';
+ $('wmrow').style.display=isImg?'flex':'none';
+ if(isImg){
+  const r=new FileReader();
+  r.onload=()=>{IMG=new Image();IMG.src=r.result;$('prev').src=r.result;$('prev').style.display='block';};
+  r.readAsDataURL(f);
+ }else{
+  $('prev').style.display='none';
+  const r=new FileReader();r.onload=()=>TEXT=String(r.result);r.readAsText(f);}}
+function reset(){$('fcard').classList.remove('show');FILE=null;}
+function fmtSize(b){return b>1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(1)+' KB';}
+$('q').oninput=()=>$('qv').textContent=$('q').value+'%';
+$('rs').oninput=()=>$('rsv').textContent=$('rs').value+'%';
+function convert(){
+ if(!FILE)return;
+ const go=$('go');go.disabled=true;go.textContent='Converting…';
+ setTimeout(()=>{
+  try{isImg?convImg():convTxt();}
+  catch(e){toast('⚠ '+e.message);}
+  go.disabled=false;go.textContent='⚡ Convert & download';},350);}
+function convImg(){
+ if(!IMG||!IMG.naturalWidth)throw new Error('Image still loading — try again');
+ const q=+$('q').value/100,scale=+$('rs').value/100;
+ const cv=document.createElement('canvas');
+ cv.width=Math.max(1,Math.round(IMG.naturalWidth*scale));
+ cv.height=Math.max(1,Math.round(IMG.naturalHeight*scale));
+ const c=cv.getContext('2d');
+ if(target==='image/jpeg'){c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);}
+ c.drawImage(IMG,0,0,cv.width,cv.height);
+ const wm=$('wm').value.trim();
+ if(wm){const fs=Math.max(13,cv.width*.028);
+  c.font='600 '+fs+'px Inter,sans-serif';
+  c.fillStyle='rgba(255,255,255,.6)';c.strokeStyle='rgba(0,0,0,.35)';c.lineWidth=fs/9;
+  c.textAlign='right';
+  c.strokeText(wm,cv.width-fs*.7,cv.height-fs*.7);
+  c.fillText(wm,cv.width-fs*.7,cv.height-fs*.7);}
+ cv.toBlob(b=>{
+  const ext=target.split('/')[1].replace('jpeg','jpg');
+  const name=FILE.name.replace(/\.\w+$/,'')+'.'+ext;
+  dl(b,name);
+  const pct=Math.round((1-b.size/FILE.size)*100);
+  $('savings').textContent=pct>0?'↓ '+pct+'% smaller ('+fmtSize(FILE.size)+' → '+fmtSize(b.size)+')':'new size: '+fmtSize(b.size);
+  addHist(FILE.name,name,b.size);},target,q);}
+function convTxt(){
+ const base=FILE.name.replace(/\.\w+$/,'');
+ let blob,name;
+ if(target==='txt'){blob=new Blob([TEXT],{type:'text/plain'});name=base+'.txt';}
+ else if(target==='html'){
+  let h=esc(TEXT);
+  h=h.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>');
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*\n]+)\*/g,'<i>$1</i>');
+  h=h.split(/\n\n+/).map(p=>/^<h/.test(p)?p:'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('\n');
+  blob=new Blob(['<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(base)+'</title><style>body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:0 20px;line-height:1.75;color:#222}h1,h2,h3{font-family:system-ui,sans-serif;letter-spacing:-.02em}</style></head><body>'+h+'</body></html>'],{type:'text/html'});
+  name=base+'.html';}
+ else if(target==='json'){
+  blob=new Blob([JSON.stringify({file:FILE.name,converted:new Date().toISOString(),lines:TEXT.split('\n')},null,2)],{type:'application/json'});
+  name=base+'.json';}
+ else{
+  let j;try{j=JSON.parse(TEXT);}catch(e){throw new Error('CSV needs valid JSON input (an array of objects)');}
+  const arr=Array.isArray(j)?j:[j];
+  const keys=[...new Set(arr.flatMap(o=>Object.keys(o)))];
+  const csv=[keys.join(',')].concat(arr.map(o=>keys.map(k=>JSON.stringify(o[k]??'')).join(','))).join('\n');
+  blob=new Blob([csv],{type:'text/csv'});name=base+'.csv';}
+ dl(blob,name);
+ $('savings').textContent='converted → '+name;
+ addHist(FILE.name,name,blob.size);}
+function dl(blob,name){
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=name;a.click();
+ toast('Downloaded '+name+' ✓');}
+let hist=[];
+function addHist(from,to,size){
+ hist.unshift({from,to,size});hist=hist.slice(0,5);
+ $('histH').style.display='block';
+ $('hist').innerHTML=hist.map((h,i)=>
+  '<div class="hitem" style="animation-delay:'+i*60+'ms">📄 '+esc(h.from)+
+  '<span class="arrow">→</span>'+esc(h.to)+'<small>'+fmtSize(h.size)+'</small></div>').join('');}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+ clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+</script></body></html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sketchpad — Ideas, drawn out</title>
+<meta name="description" content="Sketchpad is a fast canvas drawing app: brush, eraser, shapes, colors, undo/redo, and PNG export. Draw with mouse, touch or stylus.">
+<meta property="og:title" content="Sketchpad"><meta property="og:description" content="Ideas, drawn out.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#ececf1;--surface:#ffffff;--surface-2:#f5f5f8;
+ --border:#dcdce4;--border-hi:#c3c3d0;
+ --text:#1b1b22;--text-2:#67677a;--text-3:#a3a3b4;
+ --ink:#4f46e5;--ink-dim:#eef0fe;
+ --radius:10px;
+ --font:'Inter',system-ui,sans-serif;
+ --shadow:0 8px 32px rgba(27,27,40,.14);
+ --t:.14s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
+.topbar{display:flex;align-items:center;gap:10px;padding:11px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{font-weight:800;font-size:15.5px;display:flex;gap:8px;align-items:center}
+.logo .mark{color:var(--ink)}
+.spacer{flex:1}
+.tool{width:38px;height:38px;border:1px solid transparent;background:none;border-radius:var(--radius);font-size:16px;cursor:pointer;transition:all var(--t);display:grid;place-items:center;color:var(--text-2)}
+.tool:hover{background:var(--surface-2);color:var(--text)}
+.tool.on{background:var(--ink-dim);border-color:var(--ink);color:var(--ink)}
+.tool:disabled{opacity:.35;cursor:default}
+.sep{width:1px;height:26px;background:var(--border)}
+.sizes{display:flex;gap:5px;align-items:center}
+.size{border:1px solid transparent;background:none;border-radius:50%;cursor:pointer;display:grid;place-items:center;width:32px;height:32px;transition:all var(--t)}
+.size:hover{background:var(--surface-2)}
+.size.on{border-color:var(--ink);background:var(--ink-dim)}
+.size i{border-radius:50%;background:var(--text)}
+.colors{display:flex;gap:5px;align-items:center}
+.cbtn{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform var(--t)}
+.cbtn:hover{transform:scale(1.15)}
+.cbtn.on{border-color:var(--text);transform:scale(1.12)}
+input[type=color]{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;padding:2px;cursor:pointer;background:var(--surface)}
+.btn{border:none;border-radius:var(--radius);padding:9px 16px;font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;transition:all var(--t)}
+.btn.pri{background:var(--ink);color:#fff}
+.btn.pri:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn.ghost{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.btn.ghost:hover{color:var(--text)}
+.stage{flex:1;position:relative;overflow:hidden;display:grid;place-items:center;padding:16px}
+canvas.board{background:#fff;border-radius:14px;box-shadow:var(--shadow);cursor:crosshair;touch-action:none;max-width:100%;max-height:100%}
+.hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:5px 14px}
+.kbd{border:1px solid var(--border-hi);border-radius:4px;padding:0 5px;font-size:10px}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">✏︎</span>Sketchpad</span>
+ <span class="sep"></span>
+ <button class="tool on" data-t="brush" title="Brush (B)">🖌</button>
+ <button class="tool" data-t="eraser" title="Eraser (E)">🧽</button>
+ <button class="tool" data-t="line" title="Line (L)">╱</button>
+ <button class="tool" data-t="rect" title="Rectangle (R)">▭</button>
+ <button class="tool" data-t="circle" title="Circle (C)">◯</button>
+ <span class="sep"></span>
+ <span class="sizes" id="sizes"></span>
+ <span class="sep"></span>
+ <span class="colors" id="colors"><input type="color" id="custom" value="#4f46e5" title="Custom color"></span>
+ <span class="spacer"></span>
+ <button class="tool" id="undoBtn" title="Undo (⌘Z)">↩</button>
+ <button class="tool" id="redoBtn" title="Redo (⌘⇧Z)">↪</button>
+ <button class="btn ghost" id="clearBtn">Clear</button>
+ <button class="btn pri" id="saveBtn">⬇ PNG</button>
+</header>
+<div class="stage" id="stage">
+ <canvas class="board" id="board"></canvas>
+ <span class="hint"><span class="kbd">B</span> brush · <span class="kbd">E</span> eraser · <span class="kbd">⌘Z</span> undo · draw with mouse, finger or stylus</span>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const cv=$('board'),ctx=cv.getContext('2d');
+let tool='brush',size=4,color='#1b1b22',drawing=false,sx=0,sy=0,snapshot=null;
+let undoStack=[],redoStack=[];
+const SIZES=[2,4,8,14],COLORS=['#1b1b22','#4f46e5','#e5484d','#1a9e6c','#d29922','#0ea5e9','#bc5cf5','#ffffff'];
+/* setup canvas */
+function fit(){
+ const st=$('stage'),pad=32;
+ const w=Math.min(1100,st.clientWidth-pad),h=st.clientHeight-pad;
+ const tmp=document.createElement('canvas');
+ tmp.width=cv.width;tmp.height=cv.height;
+ if(cv.width)tmp.getContext('2d').drawImage(cv,0,0);
+ cv.width=w*devicePixelRatio;cv.height=h*devicePixelRatio;
+ cv.style.width=w+'px';cv.style.height=h+'px';
+ ctx.scale(devicePixelRatio,devicePixelRatio);
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+ if(tmp.width)ctx.drawImage(tmp,0,0,tmp.width/devicePixelRatio,tmp.height/devicePixelRatio);
+ ctx.lineCap='round';ctx.lineJoin='round';}
+addEventListener('resize',fit);
+/* toolbar */
+document.querySelectorAll('.tool[data-t]').forEach(b=>b.onclick=()=>{
+ tool=b.dataset.t;
+ document.querySelectorAll('.tool[data-t]').forEach(x=>x.classList.toggle('on',x===b));});
+SIZES.forEach((s,i)=>{const b=document.createElement('button');
+ b.className='size'+(i===1?' on':'');b.title=s+'px';
+ b.innerHTML='<i style="width:'+(s+3)+'px;height:'+(s+3)+'px"></i>';
+ b.onclick=()=>{size=s;document.querySelectorAll('.size').forEach(x=>x.classList.toggle('on',x===b));};
+ $('sizes').appendChild(b);});
+COLORS.forEach((c,i)=>{const b=document.createElement('button');
+ b.className='cbtn'+(i===0?' on':'');b.style.background=c;
+ if(c==='#ffffff')b.style.border='2.5px solid var(--border)';
+ b.title=c;b.setAttribute('aria-label','Color '+c);
+ b.onclick=()=>{color=c;document.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
+ $('colors').insertBefore(b,$('custom'));});
+$('custom').oninput=e=>{color=e.target.value;
+ document.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('on'));};
+/* undo/redo */
+function pushUndo(){
+ undoStack.push(cv.toDataURL());
+ if(undoStack.length>30)undoStack.shift();
+ redoStack=[];updateBtns();}
+function restore(url){
+ const img=new Image();
+ img.onload=()=>{ctx.save();ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(img,0,0,cv.width,cv.height);ctx.restore();};
+ img.src=url;}
+$('undoBtn').onclick=()=>{if(!undoStack.length)return;
+ redoStack.push(cv.toDataURL());restore(undoStack.pop());updateBtns();};
+$('redoBtn').onclick=()=>{if(!redoStack.length)return;
+ undoStack.push(cv.toDataURL());restore(redoStack.pop());updateBtns();};
+function updateBtns(){$('undoBtn').disabled=!undoStack.length;$('redoBtn').disabled=!redoStack.length;}
+/* drawing */
+function pos(e){const r=cv.getBoundingClientRect();
+ return [e.clientX-r.left,e.clientY-r.top];}
+cv.addEventListener('pointerdown',e=>{
+ e.preventDefault();cv.setPointerCapture(e.pointerId);
+ pushUndo();drawing=true;[sx,sy]=pos(e);
+ if(tool==='brush'||tool==='eraser'){
+  ctx.beginPath();ctx.moveTo(sx,sy);}
+ else{const c2=document.createElement('canvas');
+  c2.width=cv.width;c2.height=cv.height;
+  c2.getContext('2d').drawImage(cv,0,0);snapshot=c2;}});
+cv.addEventListener('pointermove',e=>{
+ if(!drawing)return;
+ const [x,y]=pos(e);
+ ctx.lineWidth=tool==='eraser'?size*4:size;
+ ctx.strokeStyle=tool==='eraser'?'#ffffff':color;
+ if(tool==='brush'||tool==='eraser'){ctx.lineTo(x,y);ctx.stroke();}
+ else if(snapshot){
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(snapshot,0,0,cv.width,cv.height);ctx.restore();
+  ctx.beginPath();
+  if(tool==='line'){ctx.moveTo(sx,sy);ctx.lineTo(x,y);}
+  else if(tool==='rect')ctx.rect(Math.min(sx,x),Math.min(sy,y),Math.abs(x-sx),Math.abs(y-sy));
+  else{const r=Math.hypot(x-sx,y-sy);ctx.arc(sx,sy,r,0,7);}
+  ctx.stroke();}});
+['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{drawing=false;snapshot=null;}));
+/* actions */
+$('clearBtn').onclick=()=>{pushUndo();
+ ctx.save();ctx.setTransform(1,0,0,1,0,0);
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.restore();};
+$('saveBtn').onclick=()=>{const a=document.createElement('a');
+ a.download='sketchpad.png';a.href=cv.toDataURL('image/png');a.click();};
+/* shortcuts */
+addEventListener('keydown',e=>{
+ if(e.target.matches('input'))return;
+ const k=e.key.toLowerCase();
+ if((e.metaKey||e.ctrlKey)&&k==='z'){e.preventDefault();
+  e.shiftKey?$('redoBtn').click():$('undoBtn').click();return;}
+ const map={b:'brush',e:'eraser',l:'line',r:'rect',c:'circle'};
+ if(map[k]){const btn=document.querySelector('[data-t="'+map[k]+'"]');if(btn)btn.click();}});
+fit();updateBtns();
+</script></body></html>

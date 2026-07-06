@@ -1,0 +1,228 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Snipline — Short links, long insights</title>
+<meta name="description" content="Snipline shortens URLs with custom aliases, tracks every click with sparkline analytics, and generates QR codes — all stored privately in your browser.">
+<meta property="og:title" content="Snipline"><meta property="og:description" content="Short links, long insights.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0a0a0f;--bg-2:#101018;--surface:#16161f;--surface-2:#1d1d29;
+ --border:#26263a;--border-hi:#37374f;
+ --text:#ededf2;--text-2:#9a9ab0;--text-3:#5c5c72;
+ --primary:#a78bfa;--primary-hi:#b8a1fb;--primary-dim:rgba(167,139,250,.13);
+ --success:#4ade80;--error:#f87171;
+ --radius:10px;--radius-lg:16px;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.15s cubic-bezier(.4,0,.2,1);
+ --shadow:0 16px 50px rgba(0,0,0,.5);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased;
+background-image:radial-gradient(ellipse 60% 40% at 50% -5%,rgba(167,139,250,.12),transparent)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px max(20px,3vw)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.02em}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#6366f1);display:grid;place-items:center;font-size:13px;color:#16062e}
+.spacer{flex:1}
+.wrap{max-width:760px;margin:0 auto;padding:16px max(16px,3vw) 70px}
+.hero{text-align:center;padding:26px 0 30px}
+.hero h1{font-size:clamp(26px,5vw,38px);font-weight:800;letter-spacing:-.035em;line-height:1.15}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--primary),#6366f1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--text-2);margin-top:8px}
+/* create card */
+.create{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow)}
+.frow{display:flex;gap:10px;margin-bottom:10px}
+@media(max-width:560px){.frow{flex-direction:column}}
+.fld{flex:1;position:relative;min-width:0}
+.fld input{width:100%;background:var(--bg-2);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text);padding:13px 15px;font-size:14px;font-family:var(--font);outline:none;transition:all var(--t)}
+.fld input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-dim)}
+.fld input::placeholder{color:var(--text-3)}
+.fld .prefix{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--text-3);font-family:var(--mono);font-size:13px;pointer-events:none}
+.fld input.alias{padding-left:74px;font-family:var(--mono)}
+.go{width:100%;padding:14px;border:none;border-radius:var(--radius);background:linear-gradient(90deg,var(--primary),#8b5cf6);color:#16062e;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;transition:all var(--t)}
+.go:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(167,139,250,.35);filter:brightness(1.06)}
+.err{color:var(--error);font-size:12.5px;margin-top:10px;min-height:16px}
+/* stats strip */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;text-align:center;transition:all var(--t)}
+.scard:hover{border-color:var(--border-hi);transform:translateY(-2px)}
+.scard b{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;background:linear-gradient(90deg,var(--primary),#6366f1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.scard small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;font-weight:600}
+/* links */
+.h2{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;margin:6px 0 12px}
+.link{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:12px;transition:all var(--t);animation:rise .35s cubic-bezier(.2,.8,.3,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.link:hover{border-color:var(--border-hi)}
+.lrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.short{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--primary-hi);cursor:pointer;transition:color var(--t)}
+.short:hover{color:#fff;text-decoration:underline}
+.long{flex-basis:100%;color:var(--text-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lmeta{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+.clicks{font-size:12px;color:var(--success);font-weight:600;font-variant-numeric:tabular-nums}
+.date{font-size:11.5px;color:var(--text-3)}
+.spark{display:flex;align-items:flex-end;gap:2px;height:22px;margin-left:auto}
+.spark i{width:5px;border-radius:2px 2px 0 0;background:var(--primary);opacity:.75;min-height:2px}
+.acts{display:flex;gap:6px}
+.act{background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-family:var(--font);font-weight:600;transition:all var(--t)}
+.act:hover{color:var(--text);border-color:var(--primary)}
+.act.danger:hover{color:var(--error);border-color:var(--error)}
+.qrbox{margin-top:14px;display:none;gap:14px;align-items:center}
+.qrbox.show{display:flex;animation:rise .3s}
+.qrbox canvas{border-radius:10px;background:#fff;padding:6px}
+.qrbox small{color:var(--text-3);font-size:11.5px;line-height:1.6}
+.empty{text-align:center;padding:44px 20px;color:var(--text-3);border:1.5px dashed var(--border);border-radius:var(--radius-lg)}
+.empty .art{font-size:36px;margin-bottom:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,90px);background:var(--surface);border:1px solid var(--primary);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);z-index:99}
+.toast.show{transform:translate(-50%,0)}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">⌁</span>Snipline</span>
+ <span class="spacer"></span>
+ <button class="act" onclick="exportJson()">↓ Export</button>
+</header>
+<div class="wrap">
+ <section class="hero">
+  <h1>Short links, <em>long insights.</em></h1>
+  <p>Shorten, brand, track and QR — every click counted, privately.</p>
+ </section>
+ <div class="create">
+  <div class="frow">
+   <div class="fld"><input id="url" placeholder="Paste a long URL — https://…" aria-label="URL to shorten"></div>
+  </div>
+  <div class="frow">
+   <div class="fld"><span class="prefix">snip.ly/</span><input id="alias" class="alias" placeholder="custom-alias (optional)" maxlength="24" aria-label="Custom alias"></div>
+  </div>
+  <div class="frow">
+   <div class="fld"><input id="expire" type="number" min="0" placeholder="Expires in days (blank = never)" aria-label="Expiry days"></div>
+   <div class="fld"><input id="pwd" type="password" placeholder="Password protect (optional)" aria-label="Password"></div>
+   <div class="fld"><input id="cat" placeholder="Category — e.g. work" maxlength="16" aria-label="Category"></div>
+  </div>
+  <button class="go" onclick="shorten()">Shorten it ⌁</button>
+  <div class="err" id="err" role="alert"></div>
+ </div>
+ <div class="strip">
+  <div class="scard"><b id="t-links">0</b><small>links</small></div>
+  <div class="scard"><b id="t-clicks">0</b><small>total clicks</small></div>
+  <div class="scard"><b id="t-top">—</b><small>top performer</small></div>
+ </div>
+ <div class="h2" style="display:flex;gap:10px;align-items:center">Your links
+  <input id="lq" placeholder="search…" style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 11px;font-size:12px;font-family:var(--font);outline:none" aria-label="Search links">
+  <span id="catChips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+ </div>
+ <div id="links"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+'use strict';
+/* sandbox-safe confirm/prompt/alert replacements */
+function safeConfirm(msg){try{const r=window.confirm(msg);return r;}catch(e){return true;}}
+function safeAlert(msg){try{window.alert(msg);}catch(e){
+ let el=document.getElementById('__salert');
+ if(!el){el=document.createElement('div');el.id='__salert';
+  el.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#1c1c28;color:#fff;border:1px solid #555;border-radius:12px;padding:16px 22px;font:13px/1.7 system-ui;white-space:pre-wrap;max-width:min(480px,90vw);max-height:70vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  document.body.appendChild(el);}
+ el.textContent=msg;el.style.display='block';
+ clearTimeout(el.__t);el.__t=setTimeout(()=>el.style.display='none',6000);
+ el.onclick=()=>el.style.display='none';}}
+function safePrompt(msg,def){try{return window.prompt(msg,def);}catch(e){return def;}}
+
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+let db=load();
+function load(){try{const d=JSON.parse(__LS.getItem('snipline'));if(d)return d;}catch(e){}return {};}
+function persist(){__LS.setItem('snipline',JSON.stringify(db));}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function shorten(){
+ const u=$('url').value.trim();
+ let a=$('alias').value.trim().toLowerCase().replace(/[^\w-]/g,'');
+ $('err').textContent='';
+ let parsed;try{parsed=new URL(u);}catch(e){$('err').textContent='⚠ Enter a valid URL including https://';return;}
+ if(!/^https?:$/.test(parsed.protocol)){$('err').textContent='⚠ Only http/https URLs allowed';return;}
+ if(!a)a=Math.random().toString(36).slice(2,8);
+ if(db[a]){$('err').textContent='⚠ “'+a+'” is taken — try another alias';return;}
+ const exp=+($('expire').value||0);
+ db[a]={url:u,clicks:0,made:Date.now(),daily:{},
+  exp:exp>0?Date.now()+exp*864e5:0,
+  pwd:$('pwd').value||'',cat:$('cat').value.trim().toLowerCase()||''};
+ $('expire').value='';$('pwd').value='';$('cat').value='';
+ $('url').value='';$('alias').value='';
+ persist();render();toast('Created snip.ly/'+a+' ✓');}
+function go(a){
+ const l=db[a];
+ if(l.exp&&Date.now()>l.exp)return toast('⌛ This link has expired');
+ if(l.pwd){const t=safePrompt('This link is password-protected:','');
+  if(t!==l.pwd)return toast('❌ Wrong password');}
+ l.clicks++;
+ const day=new Date().toISOString().slice(0,10);
+ l.daily[day]=(l.daily[day]||0)+1;
+ persist();render();
+ const w=window.open(l.url,'_blank','noopener');
+ if(!w)toast('Click counted ✓ (pop-up blocked in preview — opens on the hosted site)');}
+function copy(a){copyTxt('https://snip.ly/'+a).then(()=>toast('Copied snip.ly/'+a));}
+function del(a){delete db[a];persist();render();toast('Link deleted');}
+function qr(a,btn){
+ const box=btn.closest('.link').querySelector('.qrbox');
+ if(box.classList.contains('show')){box.classList.remove('show');return;}
+ box.classList.add('show');
+ const cv=box.querySelector('canvas'),N=25,cell=4,ctx=cv.getContext('2d');
+ cv.width=cv.height=N*cell;
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#16062e';
+ const data='https://snip.ly/'+a;
+ let h=5381;for(let i=0;i<data.length;i++)h=((h<<5)+h+data.charCodeAt(i))>>>0;
+ const fin=(x0,y0)=>{for(let y=0;y<7;y++)for(let x=0;x<7;x++)
+  if(x===0||x===6||y===0||y===6||(x>1&&x<5&&y>1&&y<5))ctx.fillRect((x0+x)*cell,(y0+y)*cell,cell,cell);};
+ fin(0,0);fin(N-7,0);fin(0,N-7);
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+  if((x<8&&y<8)||(x>=N-8&&y<8)||(x<8&&y>=N-8))continue;
+  h=(h*1103515245+12345)>>>0;if(h%100<46)ctx.fillRect(x*cell,y*cell,cell,cell);}}
+function sparkline(l){
+ const days=[...Array(14)].map((_,i)=>{
+  const d=new Date(Date.now()-(13-i)*864e5).toISOString().slice(0,10);
+  return l.daily[d]||0;});
+ const mx=Math.max(1,...days);
+ return days.map(v=>'<i style="height:'+Math.max(8,v/mx*100)+'%;opacity:'+(v?1:.25)+'"></i>').join('');}
+let filterCat='';
+function render(){
+ const q=($('lq')&&$('lq').value||'').toLowerCase();
+ let keys=Object.keys(db).sort((a,b)=>db[b].made-db[a].made);
+ const cats=[...new Set(keys.map(k=>db[k].cat).filter(Boolean))];
+ $('catChips').innerHTML=cats.map(c=>'<button class="act" style="'+(filterCat===c?'border-color:var(--primary);color:var(--primary-hi)':'')+'" onclick="filterCat=filterCat===\''+c+'\'?\'\':\''+c+'\';render()">'+esc(c)+'</button>').join('');
+ keys=keys.filter(k=>(!q||k.includes(q)||db[k].url.toLowerCase().includes(q))&&(!filterCat||db[k].cat===filterCat));
+ const total=keys.reduce((s,k)=>s+db[k].clicks,0);
+ $('t-links').textContent=keys.length;
+ $('t-clicks').textContent=total.toLocaleString();
+ const top=keys.slice().sort((a,b)=>db[b].clicks-db[a].clicks)[0];
+ $('t-top').textContent=top&&db[top].clicks?('/'+top):'—';
+ $('links').innerHTML=keys.length?keys.map((a,i)=>{
+  const l=db[a];
+  return '<div class="link" style="animation-delay:'+Math.min(i*60,400)+'ms">'+
+  '<div class="lrow"><span class="short" onclick="go(\''+a+'\')" title="Open & count click">snip.ly/'+a+' ↗</span>'+
+  (l.pwd?'<span style="font-size:11px">🔒</span>':'')+
+  (l.exp?'<span style="font-size:10.5px;color:'+(Date.now()>l.exp?'var(--error)':'var(--text-3)')+'">'+(Date.now()>l.exp?'expired':'⏳ '+Math.ceil((l.exp-Date.now())/864e5)+'d')+'</span>':'')+
+  (l.cat?'<span style="font-size:10.5px;background:var(--primary-dim);color:var(--primary-hi);padding:2px 9px;border-radius:10px;font-weight:600">'+esc(l.cat)+'</span>':'')+
+  '<span class="long">'+esc(l.url)+'</span></div>'+
+  '<div class="lmeta"><span class="clicks">▲ '+l.clicks+' click'+(l.clicks!==1?'s':'')+'</span>'+
+  '<span class="date">'+new Date(l.made).toLocaleDateString()+'</span>'+
+  '<span class="spark" title="Last 14 days">'+sparkline(l)+'</span>'+
+  '<span class="acts"><button class="act" onclick="copy(\''+a+'\')">Copy</button>'+
+  '<button class="act" onclick="qr(\''+a+'\',this)">QR</button>'+
+  '<button class="act danger" onclick="del(\''+a+'\')">Delete</button></span></div>'+
+  '<div class="qrbox"><canvas width="100" height="100"></canvas><small><b>snip.ly/'+a+'</b><br>Scan to open on any device.<br>(Demo QR pattern — decorative)</small></div></div>';}).join('')
+ :'<div class="empty"><div class="art">⌁</div><b>No links yet</b><br>Paste a long URL above — your first short link takes 3 seconds.</div>';}
+function exportJson(){
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
+ a.download='snipline-links.json';a.click();toast('Exported links ✓');}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+ clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+$('url').addEventListener('keydown',e=>{if(e.key==='Enter')shorten();});
+$('lq').addEventListener('input',render);
+$('alias').addEventListener('keydown',e=>{if(e.key==='Enter')shorten();});
+render();
+</script></body></html>

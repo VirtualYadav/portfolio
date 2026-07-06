@@ -1,0 +1,295 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gridlock — A spreadsheet that speaks formula</title>
+<meta name="description" content="Gridlock is a browser spreadsheet with a real formula engine: cell references, ranges, SUM/AVG/MIN/MAX/IF, dependency tracking with cycle detection, and CSV import/export.">
+<meta property="og:title" content="Gridlock"><meta property="og:description" content="A spreadsheet that speaks formula.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#f7f8fa;--surface:#ffffff;--surface-2:#eef1f5;
+ --border:#dde2ea;--border-hi:#c4ccd8;
+ --text:#171d26;--text-2:#5a6577;--text-3:#9aa5b5;
+ --green:#107c41;--green-dim:#e7f3ec;
+ --sel:#107c41;--err:#d64550;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.12s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{font-weight:800;font-size:15px;display:flex;gap:8px;align-items:center}
+.logo .mark{width:24px;height:24px;border-radius:6px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+.spacer{flex:1}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:8px;padding:7px 13px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;transition:all var(--t)}
+.btn:hover{color:var(--text);border-color:var(--border-hi)}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.fbar{display:flex;align-items:center;gap:8px;padding:8px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border)}
+.cellref{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--green);background:var(--green-dim);border-radius:7px;padding:6px 12px;min-width:52px;text-align:center}
+.fx{color:var(--text-3);font-style:italic;font-size:13px}
+#formula{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:13px;outline:none;transition:border-color var(--t)}
+#formula:focus{border-color:var(--green)}
+.gridwrap{flex:1;overflow:auto;position:relative}
+table{border-collapse:collapse;table-layout:fixed}
+th,td{border:1px solid var(--border);font-size:13px;position:relative}
+th{background:var(--surface-2);color:var(--text-2);font-weight:600;font-size:11.5px;padding:5px;position:sticky;z-index:2;user-select:none;min-width:92px}
+th.rowh{left:0;min-width:40px;width:40px;z-index:3}
+thead th{top:0}
+td{background:var(--surface);padding:0;min-width:92px;height:28px;cursor:cell}
+td .v{padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);font-size:12.5px;text-align:right}
+td .v.txt{text-align:left;font-family:var(--font)}
+td .v.err{color:var(--err);font-weight:700}
+td .v.formula{color:var(--green)}
+td.sel{outline:2px solid var(--sel);outline-offset:-2px;z-index:1}
+td input{position:absolute;inset:0;border:none;outline:none;padding:4px 8px;font-family:var(--mono);font-size:12.5px;background:#fff;z-index:4}
+.statusbar{display:flex;gap:18px;padding:7px max(14px,2vw);background:var(--surface);border-top:1px solid var(--border);font-size:11.5px;color:var(--text-2);font-family:var(--mono);flex-wrap:wrap}
+.statusbar b{color:var(--green)}
+.hintbar{font-size:11px;color:var(--text-3);padding:5px max(14px,2vw);background:var(--surface-2)}
+.kbd{border:1px solid var(--border-hi);border-radius:4px;padding:0 5px;font-size:10px;background:#fff}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">▦</span>Gridlock</span>
+ <span class="spacer"></span>
+ <button class="btn" onclick="loadDemo()">✨ Demo data</button>
+ <button class="btn" onclick="importCsv()">⬆ CSV</button>
+ <input type="file" id="csvFile" hidden accept=".csv">
+ <button class="btn" onclick="exportCsv()">⬇ CSV</button>
+ <button class="btn pri" onclick="saveSheet()">💾 Save</button>
+</header>
+<div class="fbar">
+ <span class="cellref" id="cellref">A1</span>
+ <span class="fx">fx</span>
+ <input id="formula" placeholder="Type a value or =SUM(A1:A5) …" autocomplete="off" spellcheck="false">
+</div>
+<div class="gridwrap" id="gridwrap"></div>
+<div class="statusbar">
+ <span id="st-sel">A1</span><span id="st-sum"></span><span id="st-avg"></span><span id="st-cnt"></span>
+</div>
+<div class="hintbar">Formulas: <span class="kbd">=A1+B2*2</span> · <span class="kbd">=SUM(A1:A10)</span> · <span class="kbd">=AVG(B1:B5)</span> · <span class="kbd">=MIN/MAX/COUNT(range)</span> · <span class="kbd">=IF(A1>10,"big","small")</span> — arrow keys navigate, Enter commits, cycles are detected</div>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const ROWS=40,COLS=12;
+const CL=i=>String.fromCharCode(65+i);
+let cells={};      /* "A1" -> {raw} */
+let vals={};       /* computed cache */
+let sel={r:0,c:0},editing=null;
+/* ---------- formula engine ---------- */
+function ref(c,r){return CL(c)+(r+1);}
+function parseRef(s){const m=/^([A-L])([0-9]{1,2})$/.exec(s);
+ if(!m)return null;return {c:m[1].charCodeAt(0)-65,r:+m[2]-1};}
+function evalCell(key,stack){
+ if(key in vals)return vals[key];
+ if(stack.has(key))throw {cyc:true};
+ stack.add(key);
+ const cell=cells[key];
+ let out='';
+ if(cell&&cell.raw!==''){
+  const raw=cell.raw;
+  if(raw[0]==='='){
+   try{out=evalExpr(raw.slice(1),stack);}
+   catch(e){out=e.cyc?'#CYCLE!':'#ERROR';}}
+  else out=isNum(raw)?+raw:raw;}
+ stack.delete(key);
+ vals[key]=out;return out;}
+function isNum(s){return s!==''&&!isNaN(s);}
+function evalExpr(src,stack){
+ /* tokenize */
+ const toks=src.match(/[A-L][0-9]{1,2}:[A-L][0-9]{1,2}|[A-L][0-9]{1,2}|[A-Z]+|"[^"]*"|[0-9.]+|[+\-*\/(),<>=!&]|\s+/gi);
+ if(!toks)throw {};
+ const T=toks.map(t=>t.trim()).filter(Boolean).map(t=>t.toUpperCase().match(/^[A-Z]/)?t.toUpperCase():t);
+ let i=0;
+ const peek=()=>T[i],eat=()=>T[i++];
+ function rangeVals(t){
+  const [a,b]=t.split(':').map(parseRef);
+  const out=[];
+  for(let r=Math.min(a.r,b.r);r<=Math.max(a.r,b.r);r++)
+   for(let c=Math.min(a.c,b.c);c<=Math.max(a.c,b.c);c++){
+    const v=evalCell(ref(c,r),stack);
+    if(typeof v==='number')out.push(v);}
+  return out;}
+ const FNS={
+  SUM:a=>a.reduce((s,x)=>s+x,0),AVG:a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0,
+  MIN:a=>a.length?Math.min(...a):0,MAX:a=>a.length?Math.max(...a):0,
+  COUNT:a=>a.length,ROUND:a=>Math.round(a[0]),ABS:a=>Math.abs(a[0]),SQRT:a=>Math.sqrt(a[0])};
+ function atom(){
+  const t=eat();
+  if(t==='('){const v=cmp();if(eat()!==')')throw {};return v;}
+  if(t==='-')return -atom();
+  if(/^"/.test(t))return t.slice(1,-1);
+  if(/^[0-9.]+$/.test(t))return +t;
+  if(/^[A-L][0-9]{1,2}:[A-L][0-9]{1,2}$/.test(t))return rangeVals(t);
+  if(/^[A-L][0-9]{1,2}$/.test(t)){const v=evalCell(t,stack);return v===''?0:v;}
+  if(t==='IF'){
+   if(eat()!=='(')throw {};
+   const cond=cmp();if(eat()!==',')throw {};
+   const yes=cmp();if(eat()!==',')throw {};
+   const no=cmp();if(eat()!==')')throw {};
+   return cond?yes:no;}
+  if(FNS[t]){
+   if(eat()!=='(')throw {};
+   const args=[];
+   while(peek()!==')'){
+    const v=cmp();
+    Array.isArray(v)?args.push(...v):args.push(v);
+    if(peek()===',')eat();}
+   eat();
+   return FNS[t](args);}
+  throw {};}
+ function term(){let v=atom();
+  while(peek()==='*'||peek()==='/'){const op=eat(),b=atom();
+   v=op==='*'?v*b:v/b;}
+  return v;}
+ function expr(){let v=term();
+  while(peek()==='+'||peek()==='-'){const op=eat(),b=term();
+   v=op==='+'?v+b:v-b;}
+  return v;}
+ function cmp(){let v=expr();
+  while(['>','<','=','>=','<=','<>'].includes(peek())||peek()==='!'){
+   let op=eat();
+   if(op==='>'&&peek()==='=')op='>=',eat();
+   if(op==='<'&&peek()==='=')op='<=',eat();
+   if(op==='<'&&peek()==='>')op='<>',eat();
+   if(op==='!'&&peek()==='=')op='<>',eat();
+   const b=expr();
+   v=op==='>'?v>b:op==='<'?v<b:op==='='?v==b:op==='>='?v>=b:op==='<='?v<=b:v!=b;}
+  return v;}
+ const result=cmp();
+ if(i<T.length)throw {};
+ if(Array.isArray(result))return result.reduce((s,x)=>s+x,0);
+ return typeof result==='boolean'?(result?'TRUE':'FALSE'):result;}
+function recalc(){vals={};
+ for(const k in cells)try{evalCell(k,new Set());}catch(e){vals[k]='#ERROR';}}
+/* ---------- grid render ---------- */
+function build(){
+ let h='<table><thead><tr><th class="rowh"></th>';
+ for(let c=0;c<COLS;c++)h+='<th>'+CL(c)+'</th>';
+ h+='</tr></thead><tbody>';
+ for(let r=0;r<ROWS;r++){
+  h+='<tr><th class="rowh">'+(r+1)+'</th>';
+  for(let c=0;c<COLS;c++)h+='<td data-r="'+r+'" data-c="'+c+'"><div class="v"></div></td>';
+  h+='</tr>';}
+ $('gridwrap').innerHTML=h+'</tbody></table>';
+ $('gridwrap').addEventListener('pointerdown',e=>{
+  const td=e.target.closest('td');if(!td)return;
+  commit();
+  select(+td.dataset.r,+td.dataset.c);
+  if(e.detail===2)startEdit();});}
+function paint(){
+ recalc();
+ document.querySelectorAll('td').forEach(td=>{
+  const key=ref(+td.dataset.c,+td.dataset.r);
+  const v=key in vals?vals[key]:'';
+  const el=td.firstChild;
+  const raw=cells[key]?cells[key].raw:'';
+  el.textContent=typeof v==='number'?(Math.round(v*10000)/10000).toLocaleString():v;
+  el.className='v'+(typeof v==='string'&&v!==''&&!v.startsWith('#')?' txt':'')+
+   (String(v).startsWith('#')?' err':'')+(raw[0]==='='?' formula':'');
+  td.classList.toggle('sel',+td.dataset.r===sel.r&&+td.dataset.c===sel.c);});
+ const key=ref(sel.c,sel.r);
+ $('cellref').textContent=key;
+ $('st-sel').textContent=key;
+ if(document.activeElement!==$('formula'))
+  $('formula').value=cells[key]?cells[key].raw:'';
+ /* stats over numeric cells */
+ const nums=Object.values(vals).filter(v=>typeof v==='number');
+ $('st-sum').innerHTML=nums.length?'SUM <b>'+(Math.round(nums.reduce((s,x)=>s+x,0)*100)/100).toLocaleString()+'</b>':'';
+ $('st-avg').innerHTML=nums.length?'AVG <b>'+(Math.round(nums.reduce((s,x)=>s+x,0)/nums.length*100)/100).toLocaleString()+'</b>':'';
+ $('st-cnt').innerHTML='CELLS <b>'+Object.keys(cells).filter(k=>cells[k].raw!=='').length+'</b>';}
+function select(r,c){sel={r:Math.max(0,Math.min(ROWS-1,r)),c:Math.max(0,Math.min(COLS-1,c))};paint();}
+/* editing */
+function startEdit(init){
+ const td=document.querySelector('td[data-r="'+sel.r+'"][data-c="'+sel.c+'"]');
+ if(!td||editing)return;
+ const inp=document.createElement('input');
+ const key=ref(sel.c,sel.r);
+ inp.value=init!==undefined?init:(cells[key]?cells[key].raw:'');
+ td.appendChild(inp);inp.focus();
+ if(init===undefined)inp.select();
+ editing={td,inp};
+ inp.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();commit();select(sel.r+1,sel.c);}
+  else if(e.key==='Tab'){e.preventDefault();commit();select(sel.r,sel.c+1);}
+  else if(e.key==='Escape'){cancel();}
+  e.stopPropagation();});}
+function commit(){
+ if(!editing)return;
+ const key=ref(sel.c,sel.r);
+ const v=editing.inp.value;
+ if(v==='')delete cells[key];
+ else cells[key]={raw:v};
+ editing.inp.remove();editing=null;paint();}
+function cancel(){if(editing){editing.inp.remove();editing=null;}}
+/* formula bar */
+$('formula').addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();
+  const key=ref(sel.c,sel.r);
+  const v=$('formula').value;
+  if(v==='')delete cells[key];else cells[key]={raw:v};
+  paint();select(sel.r+1,sel.c);}});
+/* keyboard nav */
+addEventListener('keydown',e=>{
+ if(editing||e.target===$('formula'))return;
+ if(e.key==='ArrowUp'){e.preventDefault();select(sel.r-1,sel.c);}
+ else if(e.key==='ArrowDown'||e.key==='Enter'){e.preventDefault();select(sel.r+1,sel.c);}
+ else if(e.key==='ArrowLeft'){e.preventDefault();select(sel.r,sel.c-1);}
+ else if(e.key==='ArrowRight'||e.key==='Tab'){e.preventDefault();select(sel.r,sel.c+1);}
+ else if(e.key==='Delete'||e.key==='Backspace'){
+  delete cells[ref(sel.c,sel.r)];paint();}
+ else if(e.key==='F2')startEdit();
+ else if(e.key.length===1&&!e.metaKey&&!e.ctrlKey){startEdit(e.key);}});
+/* persistence + csv */
+function saveSheet(){__LS.setItem('gridlock',JSON.stringify(cells));
+ flashTitle('Saved ✓');}
+function flashTitle(m){const old=document.title;document.title=m;setTimeout(()=>document.title=old,1200);}
+function loadDemo(){
+ cells={};
+ const demo=[['A1','Item'],['B1','Qty'],['C1','Price'],['D1','Total'],
+ ['A2','Arduino Uno'],['B2','2'],['C2','450'],['D2','=B2*C2'],
+ ['A3','Sensors kit'],['B3','1'],['C3','799'],['D3','=B3*C3'],
+ ['A4','Jumper wires'],['B4','3'],['C4','120'],['D4','=B4*C4'],
+ ['A5','LCD 16x2'],['B5','2'],['C5','180'],['D5','=B5*C5'],
+ ['A7','Subtotal'],['D7','=SUM(D2:D5)'],
+ ['A8','GST 18%'],['D8','=D7*0.18'],
+ ['A9','TOTAL'],['D9','=D7+D8'],
+ ['A11','Budget'],['B11','3000'],
+ ['A12','Status'],['B12','=IF(D9>B11,"OVER budget","within budget")']];
+ demo.forEach(([k,v])=>cells[k]={raw:v});
+ paint();}
+function exportCsv(){
+ recalc();
+ let out='';
+ for(let r=0;r<ROWS;r++){
+  const row=[];let any=false;
+  for(let c=0;c<COLS;c++){
+   const v=vals[ref(c,r)];
+   if(v!==undefined&&v!=='')any=true;
+   row.push(v===undefined?'':'"'+String(v).replace(/"/g,'""')+'"');}
+  if(any)out+=row.join(',')+'\n';}
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));
+ a.download='gridlock.csv';a.click();}
+function importCsv(){$('csvFile').click();}
+$('csvFile').onchange=()=>{
+ const f=$('csvFile').files[0];if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{cells={};
+  String(rd.result).split(/\r?\n/).slice(0,ROWS).forEach((line,r)=>{
+   line.split(',').slice(0,COLS).forEach((v,c)=>{
+    v=v.replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+    if(v)cells[ref(c,r)]={raw:v};});});
+  paint();};
+ rd.readAsText(f);};
+/* boot */
+build();
+try{const d=JSON.parse(__LS.getItem('gridlock'));
+ if(d&&Object.keys(d).length)cells=d;else loadDemo();}
+catch(e){loadDemo();}
+paint();
+</script></body></html>

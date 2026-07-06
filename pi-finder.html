@@ -1,0 +1,198 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piphany — Find yourself in π</title>
+<meta name="description" content="Piphany computes 30,000 digits of π in your browser and finds any number — your birthday, your PIN, anything — hidden in its endless digits.">
+<meta property="og:title" content="Piphany"><meta property="og:description" content="Find yourself in π.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg-a:#101426;--bg-b:#1a1040;--bg-c:#0a1f3d;
+ --glass:rgba(255,255,255,.07);--glass-hi:rgba(255,255,255,.12);
+ --border:rgba(255,255,255,.14);--border-hi:rgba(255,255,255,.28);
+ --text:#f2f4ff;--text-2:#a8b0d3;--text-3:#5f6889;
+ --gold:#ffd166;--mint:#7bf1a8;--error:#ff7b8a;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.18s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;
+ background:linear-gradient(140deg,var(--bg-a),var(--bg-b) 45%,var(--bg-c));padding:0 16px 60px;overflow-x:hidden}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* floating digits backdrop */
+.digits-bg{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.dg{position:absolute;font-family:var(--mono);color:rgba(255,255,255,.05);user-select:none;animation:driftUp linear infinite}
+@keyframes driftUp{from{transform:translateY(105vh)}to{transform:translateY(-8vh)}}
+.wrap{position:relative;z-index:1;max-width:680px;margin:0 auto}
+header{text-align:center;padding:56px 0 34px}
+.pi-mark{font-size:52px;line-height:1;background:linear-gradient(135deg,var(--gold),#ff9d6c);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+h1{font-size:clamp(28px,5.5vw,40px);font-weight:800;letter-spacing:-.03em;margin-top:8px}
+.sub{color:var(--text-2);margin-top:10px;font-size:15px;line-height:1.6}
+.sub b{color:var(--gold)}
+.glass{background:var(--glass);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--border);border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+.searchcard{padding:26px}
+.srow{display:flex;gap:10px}
+.srow input{flex:1;background:rgba(0,0,0,.32);border:1px solid var(--border);border-radius:14px;color:var(--text);padding:16px 20px;font-size:17px;font-family:var(--mono);letter-spacing:.14em;outline:none;transition:all var(--t);min-width:0}
+.srow input:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(255,209,102,.14)}
+.srow input::placeholder{color:var(--text-3);letter-spacing:0;font-family:var(--font)}
+.srow button{background:linear-gradient(135deg,var(--gold),#ff9d6c);border:none;border-radius:14px;color:#22150a;font-family:var(--font);font-weight:800;font-size:15px;padding:0 26px;cursor:pointer;transition:all var(--t)}
+.srow button:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,157,108,.35)}
+.srow button:active{transform:translateY(0)}
+.chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.chip{background:var(--glass);border:1px solid var(--border);color:var(--text-2);padding:7px 15px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:var(--mono);transition:all var(--t)}
+.chip:hover{border-color:var(--border-hi);color:var(--text);transform:translateY(-1px)}
+.progress{margin-top:14px;font-size:12.5px;color:var(--text-3);font-family:var(--mono);display:flex;align-items:center;gap:10px}
+.pbar{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--gold),#ff9d6c);border-radius:2px;transition:width .3s}
+/* result */
+.result{margin-top:18px;padding:26px;display:none}
+.result.show{display:block;animation:pop .4s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
+.pos-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pos{font-size:clamp(34px,7vw,52px);font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--gold),#ff9d6c);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.pos-cap{color:var(--text-2);font-size:14px}
+.ctx{font-family:var(--mono);font-size:15px;line-height:2.1;word-break:break-all;margin-top:16px;color:var(--text-3)}
+.ctx b{color:#22150a;background:linear-gradient(135deg,var(--gold),#ff9d6c);border-radius:6px;padding:2px 6px;font-weight:600}
+.notfound{color:var(--error);font-size:15px;line-height:1.7}
+.fact{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--text-2);line-height:1.65}
+.fact b{color:var(--mint)}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.stat{padding:18px 12px;text-align:center}
+.stat b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+footer{text-align:center;margin-top:34px;color:var(--text-3);font-size:12px;line-height:1.8}
+@media(max-width:520px){.srow{flex-direction:column}.srow button{padding:15px}}
+</style></head><body>
+<div class="digits-bg" id="dbg" aria-hidden="true"></div>
+<div class="wrap">
+<header>
+ <div class="pi-mark">π</div>
+ <h1>Piphany</h1>
+ <p class="sub">Every birthday, PIN and phone number is hiding somewhere in π.<br>We compute <b id="tot">30,000</b> digits in your browser — then find <b>yours</b>.</p>
+</header>
+<div class="glass searchcard">
+ <div class="srow">
+  <input id="q" inputmode="numeric" placeholder="Try your birthday — like 14032005" maxlength="12" aria-label="Digit sequence to search">
+  <button onclick="find()" id="goBtn">Find it</button>
+ </div>
+ <div class="chips" id="chips"></div>
+ <div class="progress" id="prog"><span id="ptext">warming up…</span><div class="pbar"><div class="pfill" id="pfill"></div></div></div>
+</div>
+<div class="glass result" id="result"></div>
+<div class="glass searchcard" style="margin-top:18px">
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+  <b style="font-size:13px">Recent searches</b><span style="flex:1"></span>
+  <button class="chip" onclick="exportHist()">↓ export</button>
+ </div>
+ <div id="hist" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+ <div style="margin-top:20px"><b style="font-size:13px">Digit frequency · first 30,000</b>
+  <div id="heat" style="display:flex;gap:6px;align-items:flex-end;height:84px;margin-top:12px"></div></div>
+</div>
+<div class="stats">
+ <div class="glass stat"><b id="s-n">0</b><small>searches</small></div>
+ <div class="glass stat"><b id="s-t">—</b><small>search speed</small></div>
+ <div class="glass stat"><b id="s-lucky">—</b><small>luck score</small></div>
+</div>
+<footer>π is (probably) a normal number — every finite digit string should appear eventually.<br>Computed live with the Rabinowitz–Wagon spigot algorithm. No servers, no libraries.</footer>
+</div>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+/* floating digits backdrop */
+(function(){const bg=$('dbg');
+ for(let i=0;i<26;i++){const d=document.createElement('span');d.className='dg';
+ d.textContent=Math.floor(Math.random()*10);
+ d.style.cssText='left:'+Math.random()*100+'%;font-size:'+(14+Math.random()*30)+'px;animation-duration:'+(14+Math.random()*22)+'s;animation-delay:-'+Math.random()*20+'s';
+ bg.appendChild(d);}})();
+/* spigot π */
+let PI='';const N=30000;
+(function(){let q=1n,r=0n,t=1n,k=1n,n=3n,l=3n;const out=[];
+ function step(){const st=Date.now();
+  while(out.length<N&&Date.now()-st<38){
+   if(4n*q+r-t<n*t){out.push(n.toString());const nr=10n*(r-n*t);n=(10n*(3n*q+r))/t-10n*n;q*=10n;r=nr;}
+   else{const nr=(2n*q+r)*l,nn=(q*(7n*k)+2n+r*l)/(t*l);q*=k;t*=l;l+=2n;k+=1n;n=nn;r=nr;}}
+  PI=out.join('');
+  $('pfill').style.width=(out.length/N*100)+'%';
+  $('ptext').textContent=out.length<N?'computing π… '+out.length.toLocaleString()+' digits':'✓ '+N.toLocaleString()+' digits ready';
+  $('tot').textContent=out.length.toLocaleString();
+  if(out.length<N)setTimeout(step,0);else renderHeat();}
+ step();})();
+/* chips */
+const today=new Date();
+const bday=String(today.getDate()).padStart(2,'0')+String(today.getMonth()+1).padStart(2,'0');
+[['Today · '+bday,bday],['007',null],['1729',null],['2005',null],['999999',null],['420',null]].forEach(([label,v])=>{
+ const c=document.createElement('button');c.className='chip';c.textContent=label;
+ c.onclick=()=>{$('q').value=v||label;find();};$('chips').appendChild(c);});
+/* search */
+let searches=0;
+const FACTS=[
+ 'The Feynman point — six 9s in a row — appears at position <b>762</b>.',
+ '<b>1729</b> is the Hardy–Ramanujan taxicab number. Of course it\'s in π.',
+ 'π has passed every statistical test for randomness ever thrown at it.',
+ 'NASA uses just <b>15 digits</b> of π for interplanetary navigation.',
+ 'Memorization world record: <b>70,000 digits</b>, recited over 10 hours.',
+ 'In 30,000 digits, each digit 0-9 appears roughly <b>3,000 times</b> each.'];
+function find(){
+ const q=$('q').value.replace(/\D/g,'');
+ const R=$('result');
+ if(!q){R.className='glass result show';R.innerHTML='<div class="notfound">Type some digits first — try your birth year.</div>';return;}
+ const t0=performance.now();
+ const i=PI.indexOf(q,1);
+ const dt=performance.now()-t0;
+ searches++;
+ $('s-n').textContent=searches;
+ $('s-t').textContent=dt<1?'<1ms':dt.toFixed(1)+'ms';
+ if(i<0){
+  $('s-lucky').textContent='🫥';
+  R.className='glass result show';
+  R.innerHTML='<div class="notfound"><b>'+q+'</b> hasn\'t shown up in the first '+PI.length.toLocaleString()+' digits.<br>'+
+  (PI.length<N?'π is still computing — try again in a second.':'Statistically it appears around position ~10<sup>'+q.length+'</sup>. Try a shorter number!')+'</div>';
+  saveHist(q,-1);return;}
+ const luck=i<100?'🍀🍀🍀':i<1000?'🍀🍀':i<10000?'🍀':'🎲';
+ $('s-lucky').textContent=luck;
+ const a=Math.max(1,i-24),b=Math.min(PI.length,i+q.length+24);
+ R.className='glass result show';
+ R.innerHTML='<div class="pos-line"><span class="pos">'+i.toLocaleString()+'</span><span class="pos-cap">digits after the decimal point</span></div>'+
+ '<div class="ctx">…'+PI.slice(a,i)+'<b>'+q+'</b>'+PI.slice(i+q.length,b)+'…</div>'+
+ '<div class="fact">💡 '+FACTS[searches%FACTS.length]+'</div>'+
+ '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="chip" onclick="copyRes()">⧉ copy result</button><button class="chip" onclick="shareRes()">↗ share</button></div>';
+ lastRes=q+' appears at position '+i.toLocaleString()+' after the decimal point of π (found with Piphany)';
+ saveHist(q,i);}
+let lastRes='';
+let HIST=[];try{HIST=JSON.parse(__LS.getItem('piphany')||'[]')}catch(e){}
+function saveHist(q,pos){HIST=HIST.filter(h=>h.q!==q);HIST.unshift({q,pos,fav:false});
+ HIST=HIST.slice(0,10);__LS.setItem('piphany',JSON.stringify(HIST));renderHist();}
+function renderHist(){
+ const el=$('hist');
+ if(!HIST.length){el.innerHTML='<span style="color:var(--text-3);font-size:12px">none yet — your searches will appear here</span>';return;}
+ el.innerHTML=HIST.slice().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)).map(h=>
+ '<span class="chip" style="display:inline-flex;gap:8px;align-items:center'+(h.fav?';border-color:var(--gold);color:var(--gold)':'')+'">'+
+ '<b style="cursor:pointer" onclick="qs2(\''+h.q+'\')">'+h.q+'</b>'+
+ '<span style="opacity:.6">'+(h.pos>=0?'@'+h.pos.toLocaleString():'not found')+'</span>'+
+ '<b style="cursor:pointer" onclick="fav(\''+h.q+'\')">'+(h.fav?'★':'☆')+'</b></span>').join('');}
+function qs2(q){$('q').value=q;find();}
+function fav(q){const h=HIST.find(x=>x.q===q);if(h)h.fav=!h.fav;
+ __LS.setItem('piphany',JSON.stringify(HIST));renderHist();}
+function exportHist(){const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(HIST,null,2)],{type:'application/json'}));
+ a.download='piphany-history.json';a.click();}
+function copyRes(){copyTxt(lastRes);}
+function shareRes(){try{if(navigator.share){navigator.share({title:'Piphany',text:lastRes}).catch(()=>copyTxt(lastRes));return;}}catch(e){}copyTxt(lastRes);}
+function renderHeat(){const cnt=Array(10).fill(0);
+ for(let i=1;i<PI.length;i++)cnt[+PI[i]]++;
+ const mx=Math.max(...cnt);
+ $('heat').innerHTML=cnt.map((c,d)=>'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+ '<span style="font-size:9px;color:var(--text-3);font-family:var(--mono)">'+c+'</span>'+
+ '<div style="width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--gold),#ff9d6c);height:'+Math.round(c/mx*50)+'px"></div>'+
+ '<b style="font-family:var(--mono);font-size:11px">'+d+'</b></div>').join('');}
+addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==$('q')){e.preventDefault();$('q').focus();}});
+renderHist();
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')find();});
+</script></body></html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ResumeIQ — Beat the bots. Impress the humans.</title>
+<meta name="description" content="ResumeIQ scores your resume against ATS systems in seconds: keyword gaps for your target role, action-verb analysis, quantification checks and a prioritized fix list.">
+<meta property="og:title" content="ResumeIQ"><meta property="og:description" content="Beat the bots. Impress the humans.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#fafafa;--surface:#ffffff;--surface-2:#f4f4f5;
+ --border:#e4e4e7;--border-hi:#d4d4d8;
+ --text:#18181b;--text-2:#52525b;--text-3:#a1a1aa;
+ --primary:#0f172a;--accent:#2563eb;--accent-dim:#eff6ff;
+ --success:#16a34a;--success-dim:#f0fdf4;
+ --warning:#d97706;--warning-dim:#fffbeb;
+ --error:#dc2626;--error-dim:#fef2f2;
+ --radius:10px;--radius-lg:16px;
+ --font:'Inter',system-ui,sans-serif;
+ --shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow:0 8px 30px rgba(0,0,0,.08);
+ --t:.16s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px max(24px,4vw);display:flex;align-items:center;gap:12px}
+.logo{font-weight:800;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:12px}
+.spacer{flex:1}
+.pill{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-dim);padding:4px 12px;border-radius:14px}
+.hero{max-width:960px;margin:0 auto;padding:44px max(20px,3vw) 8px;text-align:center}
+.hero h1{font-size:clamp(26px,4.5vw,38px);font-weight:800;letter-spacing:-.035em;line-height:1.15}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--text-2);margin-top:10px;max-width:520px;margin-inline:auto}
+.wrap{max-width:960px;margin:0 auto;padding:28px max(20px,3vw) 70px;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.card-h{padding:16px 22px;border-bottom:1px solid var(--border);font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.card-h .step{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;display:grid;place-items:center;font-weight:700}
+.card-b{padding:22px}
+textarea{width:100%;height:300px;border:1.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:13.5px;font-family:var(--font);line-height:1.7;resize:vertical;outline:none;transition:all var(--t);color:var(--text)}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--text-3)}
+.samplebtn{border:none;background:none;color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font)}
+.samplebtn:hover{text-decoration:underline}
+select{width:100%;margin-top:14px;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:var(--font);background:var(--surface);color:var(--text);cursor:pointer;transition:border-color var(--t)}
+select:focus{border-color:var(--accent);outline:none}
+.cta{width:100%;margin-top:14px;padding:14px;border:none;border-radius:var(--radius);background:var(--primary);color:#fff;font-family:var(--font);font-weight:700;font-size:14.5px;cursor:pointer;transition:all var(--t);display:flex;align-items:center;justify-content:center;gap:8px}
+.cta:hover{background:#1e293b;transform:translateY(-1px);box-shadow:var(--shadow)}
+.cta:disabled{opacity:.55;cursor:wait;transform:none}
+/* results */
+.score-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.ring{position:relative;width:132px;height:132px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:11;stroke-linecap:round}
+.ring .val{position:absolute;inset:0;display:grid;place-items:center;font-size:32px;font-weight:800;letter-spacing:-.03em}
+.verdict{flex:1;min-width:170px}
+.verdict b{font-size:17px;letter-spacing:-.01em}
+.verdict p{color:var(--text-2);font-size:13px;margin-top:5px}
+.subscores{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.sub{background:var(--surface-2);border-radius:var(--radius);padding:12px 14px}
+.sub small{font-size:10.5px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.sub .sbar{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.sub .sfill{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.2,.8,.3,1)}
+.sub b{font-size:13px}
+.h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:22px 0 10px}
+.kw{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:16px;margin:3px}
+.kw.hit{background:var(--success-dim);color:var(--success)}
+.kw.miss{background:var(--error-dim);color:var(--error)}
+.kw.miss::before{content:'+';font-weight:800}
+.fix{display:flex;gap:11px;padding:12px 14px;border-radius:var(--radius);margin-bottom:8px;font-size:13px;line-height:1.55;animation:slideIn .35s cubic-bezier(.2,.8,.3,1) backwards}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}}
+.fix .ic{flex-shrink:0;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px}
+.fix.p1{background:var(--error-dim)}.fix.p1 .ic{background:var(--error);color:#fff}
+.fix.p2{background:var(--warning-dim)}.fix.p2 .ic{background:var(--warning);color:#fff}
+.fix.p3{background:var(--success-dim)}.fix.p3 .ic{background:var(--success);color:#fff}
+.empty{padding:60px 24px;text-align:center;color:var(--text-3)}
+.empty .art{font-size:40px;margin-bottom:12px}
+.empty b{color:var(--text-2)}
+/* skeleton */
+.skel .sk{height:13px;border-radius:6px;margin:10px 0;background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:sh 1.3s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">IQ</span>ResumeIQ</span>
+ <span class="pill">100% in-browser · nothing uploaded</span>
+ <span class="spacer"></span>
+</header>
+<section class="hero">
+ <h1>Beat the bots. <em>Impress the humans.</em></h1>
+ <p>75% of resumes are rejected by ATS software before a person ever reads them. Paste yours, pick a target role, and get a prioritized fix list in seconds.</p>
+</section>
+<main class="wrap">
+ <div class="card">
+  <div class="card-h"><span class="step">1</span>Paste your resume</div>
+  <div class="card-b">
+   <div id="updrop" style="border:1.5px dashed var(--border-hi);border-radius:10px;padding:12px;text-align:center;font-size:12.5px;color:var(--text-3);cursor:pointer;margin-bottom:10px;transition:all .15s">📎 Upload .txt / .md file — or drop it here (PDF/DOCX: paste the text below)</div>
+   <input type="file" id="upfile" hidden accept=".txt,.md,.text">
+   <textarea id="rz" placeholder="Paste the full text of your resume here…" aria-label="Resume text"></textarea>
+   <div class="meta-row"><span id="wcount">0 words</span><button class="samplebtn" onclick="loadSample()">Try with a sample resume →</button></div>
+   <select id="role" aria-label="Target role">
+    <option value="frontend">🎯 Target: Frontend Developer</option>
+    <option value="fullstack">🎯 Target: Full-Stack Developer</option>
+    <option value="embedded">🎯 Target: Embedded Systems Engineer</option>
+    <option value="data">🎯 Target: Data Analyst</option>
+    <option value="ml">🎯 Target: ML Engineer</option>
+   </select>
+   <button class="cta" id="go" onclick="analyze()">Analyze my resume<span>→</span></button>
+   <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="samplebtn" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px" onclick="coverLetter()">✉️ Cover letter</button>
+    <button class="samplebtn" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px" onclick="showHistory()">🕐 History</button>
+   </div>
+  </div>
+ </div>
+ <div class="card" id="outCard">
+  <div class="card-h"><span class="step">2</span>Your report</div>
+  <div class="card-b" id="out">
+   <div class="empty"><div class="art">📊</div><b>No analysis yet</b><br>Your ATS score, keyword gaps and prioritized fixes will appear here.</div>
+  </div>
+ </div>
+</main>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const ROLES={
+ frontend:['html','css','javascript','react','typescript','responsive','git','api','state management','testing','webpack','accessibility'],
+ fullstack:['javascript','node','react','sql','mongodb','rest','git','docker','typescript','express','authentication','deployment'],
+ embedded:['c','c++','microcontroller','arduino','arm','rtos','i2c','spi','uart','firmware','embedded','debugging'],
+ data:['sql','python','excel','tableau','pandas','statistics','visualization','power bi','etl','numpy','dashboard','reporting'],
+ ml:['python','tensorflow','pytorch','scikit-learn','pandas','numpy','deep learning','nlp','model','training','feature engineering','deployment']};
+const VERBS=['built','developed','led','designed','implemented','created','improved','optimized','launched','automated','reduced','increased','shipped','architected'];
+const SAMPLE=`Anuj Yadav
+Delhi, India · yadavdm2005@gmail.com · github.com/virtualYadav
+
+EDUCATION
+B.Sc. (Hons.) Electronics — University of Delhi
+
+SKILLS
+Python, C, C++, SQL, JavaScript, Arduino, AVR microcontrollers, Git
+
+PROJECTS
+Smart Home Automation — Built an Arduino-based system with password door access, gas detection and automatic fan control, reducing manual monitoring by 80%.
+Data Structures Library — Implemented stacks, queues, trees and linked lists from scratch in Python; used by 30+ classmates.
+AVR Collection — Developed 15+ embedded C programs covering timers, interrupts, LCD and keypad interfacing.
+
+EXPERIENCE
+Electronics Lab Assistant — Led a group of 4 students; improved lab completion rate by 25%.`;
+$('rz').addEventListener('input',()=>{
+ const w=$('rz').value.trim()?$('rz').value.trim().split(/\s+/).length:0;
+ $('wcount').textContent=w+' words';});
+function loadSample(){$('rz').value=SAMPLE;$('rz').dispatchEvent(new Event('input'));$('role').value='embedded';}
+const updrop=document.getElementById('updrop'),upfile=document.getElementById('upfile');
+updrop.onclick=()=>upfile.click();
+['dragover','dragenter'].forEach(ev=>updrop.addEventListener(ev,e=>{e.preventDefault();updrop.style.borderColor='var(--accent)';}));
+['dragleave','drop'].forEach(ev=>updrop.addEventListener(ev,e=>{e.preventDefault();updrop.style.borderColor='';}));
+updrop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])readF(e.dataTransfer.files[0]);});
+upfile.onchange=()=>{if(upfile.files[0])readF(upfile.files[0]);};
+function readF(f){const r=new FileReader();
+ r.onload=()=>{$('rz').value=String(r.result);$('rz').dispatchEvent(new Event('input'));
+ updrop.textContent='✓ Loaded '+f.name;};r.readAsText(f);}
+function grammarCheck(txt){
+ const issues=[];
+ if(/ i /.test(txt))issues.push('Lowercase "i" — capitalize the pronoun I');
+ if(/\s{2,}/.test(txt.replace(/\n/g,'')))issues.push('Double spaces found');
+ if(/(^|\.\s+)[a-z]/m.test(txt))issues.push('Some sentences start lowercase');
+ [['recieve','receive'],['seperate','separate'],['occured','occurred'],['definately','definitely'],['acheive','achieve'],['managment','management'],['responsibilty','responsibility']].forEach(([w,c])=>{
+  if(txt.toLowerCase().includes(w))issues.push('Spelling: "'+w+'" → "'+c+'"');});
+ if(/very |really |basically |stuff|things/.test(txt.toLowerCase()))issues.push('Weak filler words (very/really/stuff) — cut or replace');
+ return issues;}
+function summarize(txt){
+ const lines=txt.split('\n').map(l=>l.trim()).filter(l=>l.length>25);
+ return lines.slice(0,3).map(l=>l.slice(0,110)+(l.length>110?'…':''));}
+let hist=[];try{hist=JSON.parse(__LS.getItem('resumeiq')||'[]')}catch(e){}
+function coverLetter(){
+ const txt=$('rz').value;
+ if(txt.trim().length<80){$('out').innerHTML='<div class="empty"><div class="art">✉️</div><b>Paste your resume first</b><br>The cover letter is generated from it.</div>';return;}
+ const role={frontend:'Frontend Developer',fullstack:'Full-Stack Developer',embedded:'Embedded Systems Engineer',data:'Data Analyst',ml:'ML Engineer'}[$('role').value];
+ const kws=ROLES[$('role').value].filter(k=>txt.toLowerCase().includes(k)).slice(0,4);
+ const name=(txt.split('\n')[0]||'Candidate').trim().slice(0,40);
+ const letter='Dear Hiring Manager,\n\nI am writing to apply for the '+role+' position. As my resume shows, I bring hands-on experience with '+(kws.join(', ')||'the required technologies')+', and a track record of building real projects end-to-end.\n\nWhat sets me apart is that I ship: from personal projects to coursework, I turn ideas into working software and measure the results. I would love to bring that same energy to your team.\n\nI would welcome the chance to discuss how I can contribute. Thank you for your time and consideration.\n\nSincerely,\n'+name;
+ $('out').innerHTML='<div class="h4" style="margin-top:0">Generated cover letter</div>'+
+ '<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.8;background:var(--surface-2);border-radius:10px;padding:18px">'+letter.replace(/</g,'&lt;')+'</div>'+
+ '<button class="cta" style="margin-top:14px" onclick="copyTxt('+JSON.stringify(letter).replace(/"/g,'&quot;')+').then(()=>this.textContent=&quot;Copied ✓&quot;)">Copy letter</button>';}
+function showHistory(){
+ $('out').innerHTML='<div class="h4" style="margin-top:0">Analysis history</div>'+
+ (hist.length?hist.map(h=>'<div class="fix p3" style="animation:none"><span class="ic">📊</span><span><b>'+h.score+'/100</b> · '+h.role+' · '+h.words+' words · '+h.date+'</span></div>').join(''):
+ '<div class="empty"><div class="art">🕐</div><b>No analyses yet</b></div>');}
+function analyze(){
+ const txt=$('rz').value;
+ if(txt.trim().length<80){
+  $('out').innerHTML='<div class="empty"><div class="art">✂️</div><b>That looks too short</b><br>Paste your full resume — at least a few sections.</div>';return;}
+ const go=$('go');go.disabled=true;go.innerHTML='Analyzing…';
+ $('out').innerHTML='<div class="skel">'+'<div class="sk" style="width:'+[70,90,60,80,50][Math.floor(Math.random()*5)]+'%"></div>'.repeat(7)+'</div>';
+ setTimeout(()=>{render(txt);go.disabled=false;go.innerHTML='Analyze my resume<span>→</span>';},900);}
+function render(txt){
+ const low=txt.toLowerCase();
+ const role=$('role').value,kws=ROLES[role];
+ const hit=kws.filter(k=>low.includes(k)),miss=kws.filter(k=>!low.includes(k));
+ const words=txt.trim().split(/\s+/).length;
+ const nums=(txt.match(/\d+%|\d+\+|\bby \d+|\d+ (users|students|classmates|hours|projects)/gi)||[]).length;
+ const verbs=VERBS.filter(v=>low.includes(v));
+ const email=/\S+@\S+\.\S+/.test(txt),links=/github|linkedin|portfolio/i.test(txt);
+ const sections=['experience','education','skills','projects'].filter(s=>low.includes(s));
+ /* sub-scores 0-100 */
+ const sKw=Math.round(hit.length/kws.length*100);
+ const sImpact=Math.min(100,nums*22+verbs.length*8);
+ const sStruct=Math.round(sections.length/4*70+(email?15:0)+(links?15:0));
+ const sLen=words>=250&&words<=700?100:words>=150?70:words>700?60:35;
+ const score=Math.round(sKw*.4+sImpact*.25+sStruct*.2+sLen*.15);
+ hist.unshift({score,role:$('role').selectedOptions[0].textContent.replace('🎯 Target: ',''),words,date:new Date().toLocaleDateString()});
+ hist=hist.slice(0,8);__LS.setItem('resumeiq',JSON.stringify(hist));
+ const gram=grammarCheck(txt),summ=summarize(txt);
+ const col=score>=75?'var(--success)':score>=50?'var(--warning)':'var(--error)';
+ const verdict=score>=75?['Strong resume 🎉','You\'d likely pass most ATS filters for this role. Polish the details below to stand out to humans too.']
+  :score>=50?['Almost there','You\'re passing some filters but missing easy points. The fixes below are worth 20+ points.']
+  :['Needs work — fixable','Most ATS systems would filter this out. Start with the red fixes; each one moves the needle fast.'];
+ /* fixes prioritized */
+ const fixes=[];
+ if(miss.length>3)fixes.push([1,'🔑','Add missing keywords you genuinely have: <b>'+miss.slice(0,4).join(', ')+'</b>. ATS matches exact words.']);
+ if(!email)fixes.push([1,'📧','No email found — ATS auto-rejects resumes without contact info.']);
+ if(nums<2)fixes.push([1,'📈','Quantify results: "improved X by 40%", "used by 30+ people". Numbers are the #1 recruiter eye-magnet.']);
+ if(!links)fixes.push([2,'🔗','Add GitHub + LinkedIn URLs — 87% of tech recruiters check them.']);
+ if(verbs.length<4)fixes.push([2,'⚡','Start bullets with strong verbs: built, led, shipped, optimized — not "worked on".']);
+ if(sections.length<4)fixes.push([2,'📑','Add clear section headers: '+['Experience','Education','Skills','Projects'].filter(s=>!low.includes(s.toLowerCase())).join(', ')+'.']);
+ if(words<250)fixes.push([3,'📏','At '+words+' words it\'s thin — aim for 300-600 with 2-3 bullets per project.']);
+ if(words>700)fixes.push([3,'✂️','At '+words+' words it\'s long — recruiters spend 7 seconds on first pass. Cut to one page.']);
+ if(!fixes.length)fixes.push([3,'✨','No critical issues found — tailor keywords per job posting for best results.']);
+ const r=58,c=2*Math.PI*r;
+ $('out').innerHTML=
+ '<div class="score-wrap"><div class="ring"><svg width="132" height="132"><circle cx="66" cy="66" r="'+r+'" stroke="var(--surface-2)"/>'+
+ '<circle cx="66" cy="66" r="'+r+'" stroke="'+col+'" stroke-dasharray="'+c+'" stroke-dashoffset="'+c+'" style="transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.3,1)" id="ringF"/></svg>'+
+ '<span class="val" style="color:'+col+'">'+score+'</span></div>'+
+ '<div class="verdict"><b>'+verdict[0]+'</b><p>'+verdict[1]+'</p></div></div>'+
+ '<div class="subscores">'+
+ subScore('Keywords',sKw)+subScore('Impact',sImpact)+subScore('Structure',sStruct)+subScore('Length',sLen)+'</div>'+
+ '<div class="h4">Keywords · '+hit.length+'/'+kws.length+' matched</div>'+
+ hit.map(k=>'<span class="kw hit">✓ '+k+'</span>').join('')+miss.map(k=>'<span class="kw miss">'+k+'</span>').join('')+
+ '<div class="h4">Resume summary · first impressions</div>'+
+ summ.map(s2=>'<div class="fix p3" style="animation:none"><span class="ic">👁</span><span>'+s2.replace(/</g,'&lt;')+'</span></div>').join('')+
+ '<div class="h4">Grammar & style · '+gram.length+' issue'+(gram.length!==1?'s':'')+'</div>'+
+ (gram.length?gram.map(g2=>'<div class="fix p2" style="animation:none"><span class="ic">✍️</span><span>'+g2+'</span></div>').join(''):'<div class="fix p3" style="animation:none"><span class="ic">✓</span><span>No obvious grammar issues found.</span></div>')+
+ '<div class="h4">Prioritized fixes</div>'+
+ fixes.sort((a,b)=>a[0]-b[0]).map((f,i)=>'<div class="fix p'+f[0]+'" style="animation-delay:'+i*90+'ms"><span class="ic">'+f[1]+'</span><span>'+f[2]+'</span></div>').join('');
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  document.getElementById('ringF').style.strokeDashoffset=c*(1-score/100);}));}
+function subScore(name,v){
+ const col=v>=75?'var(--success)':v>=50?'var(--warning)':'var(--error)';
+ return '<div class="sub"><small>'+name+'</small><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><b>'+v+'</b></div><div class="sbar"><div class="sfill" style="width:'+v+'%;background:'+col+'"></div></div></div>';}
+</script></body></html>

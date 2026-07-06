@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyCast — Weather that reads like poetry</title>
+<meta name="description" content="SkyCast is a beautiful weather analytics dashboard: live conditions, hourly curves, 7-day outlook, AQI and sunrise arc — with skies that change with the weather.">
+<meta property="og:title" content="SkyCast"><meta property="og:description" content="Weather that reads like poetry.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --glass:rgba(255,255,255,.1);--glass-hi:rgba(255,255,255,.16);
+ --border:rgba(255,255,255,.16);--border-hi:rgba(255,255,255,.3);
+ --text:#ffffff;--text-2:rgba(255,255,255,.72);--text-3:rgba(255,255,255,.45);
+ --radius:14px;--radius-lg:20px;
+ --font:'Inter',system-ui,sans-serif;
+ --t:.2s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;padding:22px 16px 60px;transition:background 1.2s ease;
+ background:linear-gradient(170deg,#2a5298,#1e3c72 55%,#152a52)}
+body[data-sky=clear]{background:linear-gradient(170deg,#3d7bc4,#2a5298 50%,#1b3a6b)}
+body[data-sky=hazy]{background:linear-gradient(170deg,#8a7a52,#6b5d40 50%,#403421)}
+body[data-sky=rain]{background:linear-gradient(170deg,#41547a,#2c3a57 50%,#1a2337)}
+body[data-sky=night]{background:linear-gradient(170deg,#1a2440,#111731 55%,#0a0e1f)}
+:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:6px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.wrap{max-width:820px;margin:0 auto}
+.glass{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all var(--t)}
+.glass:hover{border-color:var(--border-hi)}
+/* header */
+.top{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;letter-spacing:-.01em}
+select{background:var(--glass);border:1px solid var(--border);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-family:var(--font);cursor:pointer;outline:none;backdrop-filter:blur(10px)}
+select option{color:#000}
+.spacer{flex:1}
+.units{display:flex;background:var(--glass);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.units button{background:none;border:none;color:var(--text-3);font-family:var(--font);font-weight:600;font-size:12.5px;padding:8px 13px;cursor:pointer;transition:all var(--t)}
+.units button.on{background:rgba(255,255,255,.22);color:#fff}
+/* hero */
+.hero{padding:32px 30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:16px;animation:heroIn .6s cubic-bezier(.2,.8,.3,1)}
+@keyframes heroIn{from{opacity:0;transform:translateY(16px)}}
+.hero .t{font-size:clamp(56px,12vw,84px);font-weight:300;letter-spacing:-.05em;line-height:1}
+.hero .t sup{font-size:.4em;font-weight:400}
+.hero .c{font-size:16px;color:var(--text-2);margin-top:4px}
+.hero .hl{font-size:13px;color:var(--text-3);margin-top:6px}
+.hero .icon{font-size:clamp(60px,11vw,86px);filter:drop-shadow(0 10px 30px rgba(0,0,0,.3));animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.tile{padding:16px;animation:heroIn .6s cubic-bezier(.2,.8,.3,1) backwards}
+.tile:nth-child(2){animation-delay:.05s}.tile:nth-child(3){animation-delay:.1s}.tile:nth-child(4){animation-delay:.15s}
+.tile:nth-child(5){animation-delay:.2s}.tile:nth-child(6){animation-delay:.25s}
+.tile small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;font-weight:600;display:flex;gap:5px;align-items:center}
+.tile b{display:block;font-size:21px;font-weight:600;margin-top:7px;letter-spacing:-.02em}
+.tile .note{font-size:11.5px;color:var(--text-2);margin-top:3px}
+/* panels */
+.panel{padding:20px 22px;margin-bottom:16px}
+.panel h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:16px;display:flex;gap:7px;align-items:center}
+/* temp curve */
+.curve{position:relative;height:120px}
+.curve svg{width:100%;height:100%;overflow:visible}
+.curve .lbl{position:absolute;font-size:10px;color:var(--text-3);transform:translateX(-50%)}
+/* rain bars */
+.rain{display:flex;align-items:flex-end;gap:5px;height:90px}
+.rb{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.rb i{width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#7dd3fc,#38bdf8);min-height:3px;transition:height .6s cubic-bezier(.2,.8,.3,1)}
+.rb b{font-size:9.5px;font-weight:600;color:var(--text-2)}
+.rb small{font-size:9px;color:var(--text-3)}
+/* week */
+.week{display:flex;flex-direction:column}
+.day{display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid var(--border);font-size:13.5px}
+.day:last-child{border:none}
+.day .nm{width:44px;font-weight:600}
+.day .ic{font-size:19px;width:30px;text-align:center}
+.day .lo{color:var(--text-3);width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.day .hi{width:34px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.day .range{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.25);position:relative;overflow:hidden}
+.day .range i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#38bdf8,#fbbf24,#f87171)}
+/* aqi + sun */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.duo{grid-template-columns:1fr}}
+.aqi-num{font-size:40px;font-weight:700;letter-spacing:-.03em}
+.aqi-bar{height:9px;border-radius:5px;background:linear-gradient(90deg,#4ade80,#facc15,#fb923c,#f87171,#b91c1c);position:relative;margin:14px 0 8px}
+.aqi-dot{position:absolute;top:50%;width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid rgba(0,0,0,.4);transform:translate(-50%,-50%);transition:left .6s cubic-bezier(.2,.8,.3,1)}
+.aqi-txt{font-size:12.5px;color:var(--text-2);line-height:1.55}
+.sun-arc{position:relative;height:100px;margin-top:6px}
+.sun-arc svg{width:100%;height:100%;overflow:visible}
+.sun-times{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-2);margin-top:4px}
+footer{text-align:center;color:var(--text-3);font-size:11px;margin-top:22px;line-height:1.7}
+</style></head><body data-sky="clear">
+<div class="wrap">
+<div class="top">
+ <span class="brand">⛅ SkyCast</span>
+ <select id="city" aria-label="City">
+  <option value="delhi">📍 Delhi</option><option value="mumbai">Mumbai</option>
+  <option value="bangalore">Bengaluru</option><option value="london">London</option>
+  <option value="nyc">New York</option><option value="tokyo">Tokyo</option></select>
+ <span class="spacer"></span>
+ <div class="units"><button class="on" id="uC">°C</button><button id="uF">°F</button></div>
+</div>
+<div class="glass hero">
+ <div><div class="t" id="temp">--<sup>°</sup></div>
+  <div class="c" id="cond">—</div><div class="hl" id="hl">H: -- L: --</div></div>
+ <div class="icon" id="icon">☀️</div>
+</div>
+<div class="tiles">
+ <div class="glass tile"><small>🌡 Feels like</small><b id="feels">--°</b><div class="note" id="feelsN"></div></div>
+ <div class="glass tile"><small>💧 Humidity</small><b id="hum">--%</b><div class="note" id="humN"></div></div>
+ <div class="glass tile"><small>💨 Wind</small><b id="wind">--</b><div class="note" id="windN"></div></div>
+ <div class="glass tile"><small>☀️ UV index</small><b id="uv">--</b><div class="note" id="uvN"></div></div>
+ <div class="glass tile"><small>👁 Visibility</small><b id="vis">--</b><div class="note" id="visN"></div></div>
+ <div class="glass tile"><small>🧭 Pressure</small><b id="pres">--</b><div class="note">hPa</div></div>
+</div>
+<div class="glass panel"><h2>🌡 Temperature · next 24h</h2>
+ <div class="curve" id="curve"></div></div>
+<div class="glass panel"><h2>🌧 Precipitation chance</h2>
+ <div class="rain" id="rainC"></div></div>
+<div class="glass panel"><h2>📅 7-day outlook</h2>
+ <div class="week" id="week"></div></div>
+<div class="glass panel"><h2>🤖 AI weather insights</h2>
+ <div id="insights" style="font-size:13.5px;line-height:1.8;color:var(--text-2)"></div></div>
+<div class="duo">
+ <div class="glass panel"><h2>😮‍💨 Air quality</h2>
+  <div class="aqi-num" id="aqiv">--</div>
+  <div class="aqi-bar"><div class="aqi-dot" id="aqid" style="left:10%"></div></div>
+  <div class="aqi-txt" id="aqit"></div></div>
+ <div class="glass panel"><h2>🌅 Sun</h2>
+  <div class="sun-arc" id="sunarc"></div>
+  <div class="sun-times"><span>☀︎ 06:02</span><span id="sunNow"></span><span>☾ 18:47</span></div></div>
+</div>
+<div class="glass panel" style="margin-top:16px"><h2>📊 vs. seasonal average</h2>
+ <div id="compare" style="font-size:13px;color:var(--text-2);line-height:1.7"></div></div>
+<footer>SkyCast demo uses a deterministic offline weather model per city & date.<br>Production build: swap the model for Open-Meteo / OpenWeather API — the UI is API-ready.</footer>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const CITIES={
+ delhi:{base:34,hum:45,aqi:168,icon:'🌤',cond:'Hazy sunshine',sky:'hazy',wind:9},
+ mumbai:{base:31,hum:78,aqi:95,icon:'⛅',cond:'Humid, partly cloudy',sky:'clear',wind:14},
+ bangalore:{base:26,hum:60,aqi:75,icon:'🌤',cond:'Pleasant breeze',sky:'clear',wind:11},
+ london:{base:14,hum:82,aqi:42,icon:'🌧',cond:'Light rain',sky:'rain',wind:18},
+ nyc:{base:18,hum:55,aqi:58,icon:'🌥',cond:'Overcast',sky:'rain',wind:16},
+ tokyo:{base:22,hum:65,aqi:48,icon:'🌤',cond:'Mostly sunny',sky:'clear',wind:12}};
+const R=s=>{const x=Math.sin(s*127.1+311.7)*43758.5453;return x-Math.floor(x);};
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const ICONS=['☀️','🌤','⛅','🌥','🌧','⛈'];
+let unit='C';
+const cv=t=>unit==='C'?Math.round(t):Math.round(t*9/5+32);
+const deg=()=>'°';
+$('uC').onclick=()=>{unit='C';$('uC').classList.add('on');$('uF').classList.remove('on');render();};
+$('uF').onclick=()=>{unit='F';$('uF').classList.add('on');$('uC').classList.remove('on');render();};
+$('city').onchange=render;
+function render(){
+ const c=CITIES[$('city').value]||CITIES.delhi;
+ const today=Math.floor(Date.now()/864e5),hr=new Date().getHours();
+ const night=hr<6||hr>=19;
+ document.body.dataset.sky=night?'night':c.sky;
+ const t=c.base+Math.sin(hr/24*Math.PI*2-2)*5+R(today)*3;
+ const hi=c.base+5+R(today)*3,lo=c.base-6+R(today+1)*2;
+ $('temp').innerHTML=cv(t)+'<sup>'+deg()+'</sup>';
+ $('cond').textContent=(night?'Clear night · ':'')+c.cond;
+ $('hl').textContent='H: '+cv(hi)+'° · L: '+cv(lo)+'°';
+ $('icon').textContent=night?'🌙':c.icon;
+ const feels=t+(c.hum>70?3:-1);
+ $('feels').textContent=cv(feels)+'°';
+ $('feelsN').textContent=feels>t+1?'humidity makes it warmer':feels<t-1?'wind makes it cooler':'similar to actual';
+ const hum=Math.round(c.hum+R(today+1)*10-5);
+ $('hum').textContent=hum+'%';
+ $('humN').textContent=hum>75?'muggy':hum>45?'comfortable':'dry';
+ const wind=Math.round(c.wind+R(today+2)*10);
+ $('wind').textContent=wind+' km/h';
+ $('windN').textContent=wind>25?'blustery':wind>12?'breezy':'calm';
+ const uv=night?0:Math.round(3+R(today+3)*8);
+ $('uv').textContent=uv;
+ $('uvN').textContent=uv>=8?'very high — cover up':uv>=6?'high — SPF advised':uv>=3?'moderate':'low';
+ const vis=c.aqi>150?4+R(today)*3:8+R(today)*6;
+ $('vis').textContent=vis.toFixed(1)+' km';
+ $('visN').textContent=vis<6?'haze limits view':'clear view';
+ $('pres').textContent=Math.round(1008+R(today+4)*14);
+ /* temp curve — smooth SVG path */
+ const pts=[];
+ for(let h=0;h<=24;h+=2){
+  const tt=c.base+Math.sin(h/24*Math.PI*2-2)*5+R(today+h)*2;
+  pts.push([h/24,tt]);}
+ const mn=Math.min(...pts.map(p=>p[1]))-1,mx=Math.max(...pts.map(p=>p[1]))+1;
+ const W=100,H=100;
+ const xy=pts.map(([f,tt])=>[f*W,H-((tt-mn)/(mx-mn))*H*.82-6]);
+ let d='M'+xy[0][0]+','+xy[0][1];
+ for(let i=1;i<xy.length;i++){
+  const [x0,y0]=xy[i-1],[x1,y1]=xy[i];
+  d+=' C'+((x0+x1)/2)+','+y0+' '+((x0+x1)/2)+','+y1+' '+x1+','+y1;}
+ const nowX=(hr/24)*W;
+ $('curve').innerHTML='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'+
+ '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,255,255,.35)"/><stop offset="1" stop-color="rgba(255,255,255,0)"/></linearGradient></defs>'+
+ '<path d="'+d+' L100,100 L0,100 Z" fill="url(#g)"/>'+
+ '<path d="'+d+'" fill="none" stroke="#fff" stroke-width="1.6" vector-effect="non-scaling-stroke"/>'+
+ '<line x1="'+nowX+'" y1="0" x2="'+nowX+'" y2="100" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/></svg>'+
+ [0,6,12,18,24].map(h=>'<span class="lbl" style="left:'+(h/24*100)+'%;bottom:-16px">'+(h===24?'24':h)+'h</span>').join('');
+ /* rain */
+ let rain='';
+ for(let h=0;h<24;h+=2){
+  const p=Math.round(R(today*3+h)*(c.sky==='rain'?85:38));
+  rain+='<div class="rb"><b>'+p+'</b><i style="height:'+Math.max(4,p)+'%"></i><small>'+h+'h</small></div>';}
+ $('rainC').innerHTML=rain;
+ /* week */
+ let wk='';
+ const glo=c.base-8,ghi=c.base+9;
+ for(let dd2=0;dd2<7;dd2++){
+  const dhi=c.base+2+R(today+dd2*7)*6,dlo=dhi-7-R(today+dd2*3)*3;
+  const l=((dlo-glo)/(ghi-glo))*100,w=((dhi-dlo)/(ghi-glo))*100;
+  wk+='<div class="day"><span class="nm">'+(dd2===0?'Today':DAYS[(new Date().getDay()+dd2)%7])+'</span>'+
+  '<span class="ic">'+ICONS[Math.floor(R(today+dd2*13)*6)]+'</span>'+
+  '<span class="lo">'+cv(dlo)+'°</span><span class="range"><i style="left:'+l+'%;width:'+w+'%"></i></span>'+
+  '<span class="hi">'+cv(dhi)+'°</span></div>';}
+ $('week').innerHTML=wk;
+ /* aqi */
+ const aqi=Math.round(c.aqi+R(today+9)*30-15);
+ $('aqiv').textContent=aqi;
+ $('aqiv').style.color=aqi<50?'#4ade80':aqi<100?'#facc15':aqi<200?'#fb923c':'#f87171';
+ $('aqid').style.left=Math.min(97,Math.max(3,aqi/3))+'%';
+ $('aqit').textContent=aqi<50?'Good — perfect day to be outside.':aqi<100?'Moderate — fine for most people.':aqi<200?'Unhealthy — consider a mask outdoors, limit long exposure.':'Severe — stay indoors if you can.';
+ /* sun arc */
+ const rise=6.03,set=18.78,now=hr+new Date().getMinutes()/60;
+ const p=Math.min(1,Math.max(0,(now-rise)/(set-rise)));
+ const sx=10+p*80,sy=88-Math.sin(p*Math.PI)*72;
+ $('sunarc').innerHTML='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'+
+ '<path d="M10,88 Q50,-8 90,88" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.4" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>'+
+ (p>0&&p<1?'<circle cx="'+sx+'" cy="'+sy+'" r="5" fill="#fbbf24" style="filter:drop-shadow(0 0 8px #fbbf24)"/>':'')+
+ '<line x1="0" y1="88" x2="100" y2="88" stroke="rgba(255,255,255,.2)" vector-effect="non-scaling-stroke"/></svg>';
+ $('sunNow').textContent=p<=0?'before sunrise':p>=1?'after sunset':Math.round(p*100)+'% of daylight';
+ /* AI insights: advice engine */
+ const tips=[];
+ if(aqi>150)tips.push('😷 <b style="color:#fb923c">Air alert:</b> AQI '+aqi+' — mask up for commutes, keep windows closed till evening.');
+ if(uv>=7)tips.push('🧴 <b style="color:#fbbf24">UV '+uv+':</b> sunscreen + shade between 11am–3pm.');
+ if(c.sky==='rain')tips.push('☂️ <b>Rain day:</b> carry an umbrella; allow +15 min for travel.');
+ if(hum>75)tips.push('💦 <b>Humid:</b> hydrate often — it will feel '+cv(feels)+'° out there.');
+ if(wind>20)tips.push('💨 <b>Windy:</b> secure loose items on balconies; two-wheeler riders take care.');
+ tips.push(cv(t)>=30?'🌾 <b>Farming:</b> irrigate after sunset to cut evaporation loss; avoid midday spraying.':cv(t)<=10?'🌾 <b>Farming:</b> frost risk for seedlings — cover overnight.':'🌾 <b>Farming:</b> good conditions for field work today.');
+ tips.push(c.sky==='clear'&&aqi<120?'🧳 <b>Travel:</b> great day for sightseeing — golden hour ~'+(night?'tomorrow 5:45pm':'5:45pm')+'.':'🧳 <b>Travel:</b> indoor plans are safer today — museums over monuments.');
+ if(cv(t)>=38)tips.unshift('🥵 <b style="color:#f87171">Heat alert:</b> limit outdoor exposure 12–4pm, check on the elderly.');
+ $('insights').innerHTML=tips.map(x=>'<div style="margin-bottom:8px">'+x+'</div>').join('');
+ /* seasonal comparison */
+ const avg=c.base,diff=Math.round(t-avg);
+ $('compare').innerHTML=
+ 'Today: <b style="color:#fff">'+cv(t)+'°</b> · seasonal average: <b style="color:#fff">'+cv(avg)+'°</b> → '+
+ (Math.abs(diff)<2?'right on the seasonal norm.':(diff>0?'<b style="color:#fbbf24">'+diff+'° warmer</b> than usual for this time of year.':'<b style="color:#7dd3fc">'+(-diff)+'° cooler</b> than usual for this time of year.'))+
+ '<br>Humidity is '+(hum>c.hum+5?'above':hum<c.hum-5?'below':'near')+' its typical '+c.hum+'% for this season.';}
+render();setInterval(render,60000);
+</script></body></html>

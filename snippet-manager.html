@@ -1,0 +1,196 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SnippetVault — Your second brain for code</title>
+<meta name="description" content="SnippetVault stores your code snippets with syntax highlighting, language tags, instant fuzzy search, favorites and one-click copy. All local, all yours.">
+<meta property="og:title" content="SnippetVault"><meta property="og:description" content="Your second brain for code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0d1117;--surface:#161b22;--surface-2:#21262d;
+ --border:#30363d;--border-hi:#484f58;
+ --text:#e6edf3;--text-2:#8b949e;--text-3:#565e67;
+ --green:#3fb950;--green-dim:rgba(63,185,80,.12);
+ --blue:#58a6ff;--orange:#d29922;--purple:#bc8cff;--red:#ff7b72;
+ --radius:8px;--radius-lg:12px;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.14s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;overflow:hidden}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px max(16px,2vw);border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{font-weight:800;font-size:15.5px;display:flex;gap:8px;align-items:center}
+.logo .mark{color:var(--green)}
+.search{flex:1;max-width:420px;position:relative}
+.search input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px 12px 8px 32px;font-size:13px;font-family:var(--font);outline:none;transition:border-color var(--t)}
+.search input:focus{border-color:var(--blue)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3)}
+.spacer{flex:1}
+.btn{border:none;border-radius:var(--radius);padding:8px 15px;font-family:var(--font);font-weight:600;font-size:13px;cursor:pointer;transition:all var(--t)}
+.btn.pri{background:var(--green);color:#04260d}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.ghost{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.btn.ghost:hover{color:var(--text)}
+.main{flex:1;display:flex;overflow:hidden}
+.rail{width:190px;flex-shrink:0;border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;background:var(--surface)}
+@media(max-width:700px){.rail{display:none}}
+.rail .h{font-size:10.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;padding:8px}
+.lang{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;color:var(--text-2);font-family:var(--font);font-size:13px;padding:7px 10px;border-radius:var(--radius);cursor:pointer;text-align:left;transition:all var(--t)}
+.lang:hover{background:var(--surface-2);color:var(--text)}
+.lang.on{background:var(--green-dim);color:var(--green);font-weight:600}
+.lang .n{margin-left:auto;font-size:11px;color:var(--text-3)}
+.lang .dot{width:8px;height:8px;border-radius:50%}
+.grid{flex:1;overflow-y:auto;padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-content:start}
+.snip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:all var(--t);animation:rise .3s cubic-bezier(.2,.8,.3,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.snip:hover{border-color:var(--border-hi);transform:translateY(-2px)}
+.s-h{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--border)}
+.s-h b{font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ltag{font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em}
+.s-h button{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:13px;padding:3px;border-radius:5px;transition:color var(--t)}
+.s-h button:hover{color:var(--text)}
+.s-h button.faved{color:var(--orange)}
+pre{margin:0;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.65;overflow-x:auto;max-height:180px;overflow-y:auto}
+pre .k{color:var(--red)}pre .s{color:#a5d6ff}pre .c{color:var(--text-3);font-style:italic}pre .f{color:var(--purple)}pre .n{color:#79c0ff}
+.s-f{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--border);align-items:center}
+.s-f .tagchip{font-size:10.5px;color:var(--text-3);background:var(--surface-2);padding:2px 9px;border-radius:9px}
+.s-f .cp{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);border-radius:7px;padding:5px 12px;font-size:11.5px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all var(--t)}
+.s-f .cp:hover{color:var(--green);border-color:var(--green)}
+.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-3)}
+.empty .art{font-size:38px;margin-bottom:10px}
+/* dialog */
+dialog{border:none;background:transparent;padding:0;margin:auto}
+dialog::backdrop{background:rgba(0,0,0,.65);backdrop-filter:blur(3px)}
+.modal{width:min(560px,94vw);background:var(--surface);border:1px solid var(--border-hi);border-radius:14px;padding:22px;animation:pop .22s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.98)}}
+.modal h2{font-size:15px;margin-bottom:16px}
+.modal label{display:block;font-size:11.5px;font-weight:600;color:var(--text-2);margin:12px 0 5px}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:9px 12px;font-size:13px;font-family:var(--font);outline:none}
+.modal textarea{font-family:var(--mono);font-size:12.5px;height:150px;resize:vertical}
+.modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--blue)}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,90px);background:var(--surface);border:1px solid var(--green);color:var(--text);padding:11px 19px;border-radius:11px;font-size:13px;transition:transform .3s cubic-bezier(.2,.9,.3,1.2);z-index:99}
+.toast.show{transform:translate(-50%,0)}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">⧉</span>SnippetVault</span>
+ <div class="search">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+  <input id="q" placeholder="Search snippets… ( / )" autocomplete="off">
+ </div>
+ <span class="spacer"></span>
+ <button class="btn ghost" onclick="expAll()">↓ Export</button>
+ <button class="btn pri" onclick="openNew()">+ New snippet</button>
+</header>
+<div class="main">
+ <nav class="rail" aria-label="Languages">
+  <div class="h">Languages</div>
+  <div id="langs"></div>
+ </nav>
+ <div class="grid" id="grid"></div>
+</div>
+<dialog id="dlg"><form class="modal" method="dialog" onsubmit="return saveSnip(event)">
+ <h2 id="dlgT">New snippet</h2>
+ <label>Title</label><input id="f-t" required placeholder="e.g. Debounce function">
+ <label>Language</label><select id="f-l"><option>JavaScript</option><option>Python</option><option>C++</option><option>CSS</option><option>HTML</option><option>SQL</option><option>Bash</option><option>Other</option></select>
+ <label>Tags (comma separated)</label><input id="f-g" placeholder="utils, timing">
+ <label>Code</label><textarea id="f-c" required spellcheck="false" placeholder="Paste your code…"></textarea>
+ <div class="acts"><button type="button" class="btn ghost" onclick="dlg.close()">Cancel</button><button class="btn pri">Save</button></div>
+</form></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script>
+'use strict';
+/* sandbox-safe confirm/prompt/alert replacements */
+function safeConfirm(msg){try{const r=window.confirm(msg);return r;}catch(e){return true;}}
+function safeAlert(msg){try{window.alert(msg);}catch(e){
+ let el=document.getElementById('__salert');
+ if(!el){el=document.createElement('div');el.id='__salert';
+  el.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#1c1c28;color:#fff;border:1px solid #555;border-radius:12px;padding:16px 22px;font:13px/1.7 system-ui;white-space:pre-wrap;max-width:min(480px,90vw);max-height:70vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  document.body.appendChild(el);}
+ el.textContent=msg;el.style.display='block';
+ clearTimeout(el.__t);el.__t=setTimeout(()=>el.style.display='none',6000);
+ el.onclick=()=>el.style.display='none';}}
+function safePrompt(msg,def){try{return window.prompt(msg,def);}catch(e){return def;}}
+
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LCOL={JavaScript:'var(--orange)',Python:'var(--blue)','C++':'var(--purple)',CSS:'var(--green)',HTML:'var(--red)',SQL:'#79c0ff',Bash:'#8b949e',Other:'var(--text-3)'};
+let db=load(),langFilter='',editing=null;
+function load(){try{const d=JSON.parse(__LS.getItem('snippetvault'));if(d&&d.snips)return d;}catch(e){}
+ return {snips:[
+ {id:1,t:'Debounce function',l:'JavaScript',g:['utils','timing'],fav:true,c:'function debounce(fn, ms) {\n  let t;\n  return (...args) => {\n    clearTimeout(t);\n    t = setTimeout(() => fn(...args), ms);\n  };\n}'},
+ {id:2,t:'Read file line by line',l:'Python',g:['files'],fav:false,c:'# memory-efficient file reading\nwith open("data.txt") as f:\n    for line in f:\n        process(line.strip())'},
+ {id:3,t:'Center anything',l:'CSS',g:['layout'],fav:true,c:'.center {\n  display: grid;\n  place-items: center;\n  /* one line. that\'s it. */\n}'},
+ {id:4,t:'Binary search',l:'C++',g:['dsa','search'],fav:false,c:'int bs(vector<int>& a, int x) {\n  int lo = 0, hi = a.size() - 1;\n  while (lo <= hi) {\n    int mid = lo + (hi - lo) / 2;\n    if (a[mid] == x) return mid;\n    a[mid] < x ? lo = mid + 1 : hi = mid - 1;\n  }\n  return -1;\n}'}],next:5};}
+function persist(){__LS.setItem('snippetvault',JSON.stringify(db));}
+/* simple syntax highlight */
+function hl(code,lang){
+ let s=esc(code);
+ s=s.replace(/(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/)/g,'<span class="c">$1</span>');
+ s=s.replace(/(&quot;.*?&quot;|'[^']*'|`[^`]*`)/g,'<span class="s">$1</span>');
+ s=s.replace(/\b(function|return|const|let|var|if|else|for|while|class|def|import|from|with|int|void|vector|select|from|where|echo|new|await|async)\b/g,'<span class="k">$1</span>');
+ s=s.replace(/\b(\d+)\b/g,'<span class="n">$1</span>');
+ s=s.replace(/([a-zA-Z_]\w*)(?=\()/g,'<span class="f">$1</span>');
+ return s;}
+function render(){
+ const q=($('q').value||'').toLowerCase();
+ const snips=db.snips.filter(s=>
+  (!langFilter||s.l===langFilter)&&
+  (!q||s.t.toLowerCase().includes(q)||s.c.toLowerCase().includes(q)||s.g.some(g=>g.includes(q))))
+  .sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+ $('grid').innerHTML=snips.length?snips.map((s,i)=>
+ '<article class="snip" style="animation-delay:'+Math.min(i*50,300)+'ms">'+
+ '<div class="s-h"><span class="ltag" style="background:color-mix(in srgb,'+LCOL[s.l]+' 15%,transparent);color:'+LCOL[s.l]+'">'+s.l+'</span>'+
+ '<b>'+esc(s.t)+'</b>'+
+ '<button class="'+(s.fav?'faved':'')+'" onclick="fav('+s.id+')" aria-label="Favorite">'+(s.fav?'★':'☆')+'</button>'+
+ '<button onclick="editS('+s.id+')" aria-label="Edit">✎</button>'+
+ '<button onclick="delS('+s.id+')" aria-label="Delete">✕</button></div>'+
+ '<pre><code>'+hl(s.c,s.l)+'</code></pre>'+
+ '<div class="s-f">'+s.g.map(g=>'<span class="tagchip">#'+esc(g)+'</span>').join('')+
+ '<button class="cp" onclick="cp('+s.id+',this)">⧉ Copy</button></div></article>').join('')
+ :'<div class="empty"><div class="art">⧉</div><b style="color:var(--text-2)">'+(q||langFilter?'No snippets match':'Vault is empty')+'</b><br>Press <b>+ New snippet</b> to save your first one.</div>';
+ /* langs */
+ const counts={};db.snips.forEach(s=>counts[s.l]=(counts[s.l]||0)+1);
+ $('langs').innerHTML='<button class="lang'+(langFilter===''?' on':'')+'" onclick="setLang(\'\')"><span class="dot" style="background:var(--text-2)"></span>All<span class="n">'+db.snips.length+'</span></button>'+
+ Object.entries(counts).map(([l,n])=>
+ '<button class="lang'+(langFilter===l?' on':'')+'" onclick="setLang(\''+l+'\')"><span class="dot" style="background:'+LCOL[l]+'"></span>'+l+'<span class="n">'+n+'</span></button>').join('');}
+function setLang(l){langFilter=l;render();}
+function fav(id){const s=db.snips.find(x=>x.id===id);if(s)s.fav=!s.fav;persist();render();}
+function delS(id){if(safeConfirm('Delete snippet?')){db.snips=db.snips.filter(x=>x.id!==id);persist();render();}}
+function cp(id,btn){const s=db.snips.find(x=>x.id===id);
+ copyTxt(s.c).then(()=>{btn.textContent='✓ Copied';setTimeout(()=>btn.textContent='⧉ Copy',1400);});}
+const dlg=$('dlg');
+function openNew(){editing=null;$('dlgT').textContent='New snippet';
+ $('f-t').value='';$('f-g').value='';$('f-c').value='';dlg.showModal();}
+function editS(id){editing=db.snips.find(x=>x.id===id);
+ $('dlgT').textContent='Edit snippet';
+ $('f-t').value=editing.t;$('f-l').value=editing.l;
+ $('f-g').value=editing.g.join(', ');$('f-c').value=editing.c;dlg.showModal();}
+function saveSnip(e){e.preventDefault();
+ const data={t:$('f-t').value.trim(),l:$('f-l').value,
+  g:$('f-g').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).slice(0,4),
+  c:$('f-c').value};
+ if(!data.t||!data.c)return false;
+ if(editing)Object.assign(editing,data);
+ else db.snips.unshift({id:db.next++,fav:false,...data});
+ persist();render();dlg.close();toast(editing?'Snippet updated':'Snippet saved ✓');return false;}
+function expAll(){
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(db.snips,null,2)],{type:'application/json'}));
+ a.download='snippetvault-export.json';a.click();toast('Exported all snippets ✓');}
+$('q').addEventListener('input',render);
+addEventListener('keydown',e=>{
+ if(e.key==='/'&&!e.target.matches('input,textarea')){e.preventDefault();$('q').focus();}
+ if((e.metaKey||e.ctrlKey)&&e.key==='n'){e.preventDefault();openNew();}});
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');
+ clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2000);}
+render();
+</script></body></html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoltLab — Build logic, watch it think</title>
+<meta name="description" content="VoltLab is a real-time digital logic simulator: drag AND/OR/NOT/XOR gates onto the canvas, wire them up, flip switches and watch signals propagate live. Includes truth-table generation and circuit saving.">
+<meta property="og:title" content="VoltLab"><meta property="og:description" content="Build logic, watch it think.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0b0e14;--surface:#131722;--surface-2:#1b2130;
+ --border:#252c3f;--border-hi:#37415c;
+ --text:#e9edf6;--text-2:#93a0bd;--text-3:#556080;
+ --volt:#22d3ee;--volt-dim:rgba(34,211,238,.13);
+ --hi:#4ade80;--lo:#374663;--danger:#f4655f;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.14s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--volt);outline-offset:2px;border-radius:4px}
+.topbar{display:flex;align-items:center;gap:10px;padding:11px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{font-weight:800;font-size:15.5px;display:flex;gap:8px;align-items:center}
+.logo b{color:var(--volt)}
+.spacer{flex:1}
+.btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);border-radius:9px;padding:8px 14px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;transition:all var(--t)}
+.btn:hover{color:var(--text);border-color:var(--border-hi)}
+.btn.pri{background:var(--volt);border-color:var(--volt);color:#04222b}
+.btn.pri:hover{filter:brightness(1.1)}
+.main{flex:1;display:flex;overflow:hidden}
+.palette{width:150px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:12px 10px;overflow-y:auto}
+.palette .h{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;padding:6px 4px}
+.pitem{display:flex;align-items:center;gap:9px;width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);border-radius:9px;padding:9px 10px;font-family:var(--mono);font-size:12px;font-weight:700;cursor:grab;margin-bottom:6px;transition:all var(--t)}
+.pitem:hover{border-color:var(--volt);color:var(--volt);transform:translateX(2px)}
+.stage{flex:1;position:relative}
+canvas{display:block;width:100%;height:100%;cursor:default}
+.status{position:absolute;bottom:10px;left:12px;font-family:var(--mono);font-size:11px;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;pointer-events:none}
+.tt{position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border-hi);border-radius:12px;padding:14px;display:none;max-height:70%;overflow:auto;box-shadow:0 16px 50px rgba(0,0,0,.5)}
+.tt.show{display:block}
+.tt h3{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.tt table{border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.tt th,.tt td{border:1px solid var(--border);padding:4px 12px;text-align:center}
+.tt th{color:var(--volt)}
+.tt td.on{color:var(--hi);font-weight:700}
+@media(max-width:640px){.palette{width:110px}.pitem{font-size:10.5px;padding:8px 7px}}
+</style></head><body>
+<header class="topbar">
+ <span class="logo">⚡ Volt<b>Lab</b></span>
+ <span class="spacer"></span>
+ <button class="btn" id="ttBtn">▦ Truth table</button>
+ <button class="btn" id="demoBtn">✨ Load demo</button>
+ <button class="btn" id="clearBtn">Clear</button>
+ <button class="btn pri" id="saveBtn">💾 Save</button>
+</header>
+<div class="main">
+ <nav class="palette" aria-label="Components">
+  <div class="h">I / O</div>
+  <button class="pitem" data-k="IN">⏻ INPUT</button>
+  <button class="pitem" data-k="OUT">◉ LED</button>
+  <div class="h">Gates</div>
+  <button class="pitem" data-k="AND">AND</button>
+  <button class="pitem" data-k="OR">OR</button>
+  <button class="pitem" data-k="NOT">NOT</button>
+  <button class="pitem" data-k="XOR">XOR</button>
+  <button class="pitem" data-k="NAND">NAND</button>
+  <button class="pitem" data-k="NOR">NOR</button>
+ </nav>
+ <div class="stage" id="stage">
+  <canvas id="cv"></canvas>
+  <div class="status" id="status">click a component to add · drag to move · click output port → input port to wire · double-click INPUT to toggle · right-click deletes</div>
+  <div class="tt" id="tt"><h3>Truth table</h3><div id="ttBody"></div></div>
+ </div>
+</div>
+<script>
+'use strict';
+/* -- safe storage + clipboard (sandbox-proof) -- */
+const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
+ try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
+
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W,H,DPR;
+function fit(){DPR=Math.min(devicePixelRatio||1,2);
+ W=cv.width=cv.clientWidth*DPR;H=cv.height=cv.clientHeight*DPR;}
+addEventListener('resize',()=>{fit();draw();});
+/* model */
+const GATES={
+ AND:{ins:2,fn:v=>v[0]&&v[1]},OR:{ins:2,fn:v=>v[0]||v[1]},
+ NOT:{ins:1,fn:v=>!v[0]},XOR:{ins:2,fn:v=>v[0]!==v[1]},
+ NAND:{ins:2,fn:v=>!(v[0]&&v[1])},NOR:{ins:2,fn:v=>!(v[0]||v[1])},
+ IN:{ins:0,fn:null},OUT:{ins:1,fn:v=>v[0]}};
+let nodes=[],wires=[],nid=1;
+let drag=null,wireFrom=null,mx=0,my=0;
+function load(){try{const d=JSON.parse(__LS.getItem('voltlab'));
+ if(d){nodes=d.nodes;wires=d.wires;nid=d.nid;return true;}}catch(e){}return false;}
+function save(){__LS.setItem('voltlab',JSON.stringify({nodes,wires,nid}));
+ flash('Circuit saved ✓');}
+function addNode(k,x,y){nodes.push({id:nid++,k,x,y,state:false,label:k==='IN'?String.fromCharCode(64+nodes.filter(n=>n.k==='IN').length+1):k==='OUT'?'Q'+(nodes.filter(n=>n.k==='OUT').length+1):''});
+ sim();draw();}
+/* geometry */
+const NW=88,NH=52;
+function inPorts(n){const g=GATES[n.k];const arr=[];
+ for(let i=0;i<g.ins;i++)arr.push([n.x,n.y+NH*(g.ins===1?.5:(i+1)/(g.ins+1))]);
+ return arr;}
+function outPort(n){return n.k==='OUT'?null:[n.x+NW,n.y+NH/2];}
+function hitNode(x,y){return nodes.find(n=>x>=n.x&&x<=n.x+NW&&y>=n.y&&y<=n.y+NH);}
+function hitPort(x,y){
+ for(const n of nodes){
+  const op=outPort(n);
+  if(op&&Math.hypot(op[0]-x,op[1]-y)<14)return {n,type:'out',i:0};
+  const ips=inPorts(n);
+  for(let i=0;i<ips.length;i++)
+   if(Math.hypot(ips[i][0]-x,ips[i][1]-y)<14)return {n,type:'in',i};}
+ return null;}
+/* simulation: iterate to fixpoint */
+function sim(){
+ const val={};
+ nodes.forEach(n=>{if(n.k==='IN')val[n.id]=n.state;});
+ for(let iter=0;iter<nodes.length+4;iter++){
+  let changed=false;
+  for(const n of nodes){
+   if(n.k==='IN')continue;
+   const g=GATES[n.k];
+   const ins=[];
+   for(let i=0;i<Math.max(1,g.ins);i++){
+    const w=wires.find(w=>w.to===n.id&&w.ti===i);
+    ins.push(w?!!val[w.from]:false);}
+   const out=n.k==='OUT'?ins[0]:g.fn(ins);
+   if(val[n.id]!==out){val[n.id]=out;changed=true;}}
+  if(!changed)break;}
+ nodes.forEach(n=>{if(n.k!=='IN')n.state=!!val[n.id];});}
+/* drawing */
+function draw(){
+ ctx.setTransform(DPR,0,0,DPR,0,0);
+ ctx.clearRect(0,0,W,H);
+ /* grid */
+ ctx.fillStyle='rgba(85,96,128,.18)';
+ for(let x=20;x<W/DPR;x+=26)for(let y=20;y<H/DPR;y+=26)ctx.fillRect(x,y,1.5,1.5);
+ /* wires */
+ for(const w of wires){
+  const a=nodes.find(n=>n.id===w.from),b=nodes.find(n=>n.id===w.to);
+  if(!a||!b)continue;
+  const p1=outPort(a),p2=inPorts(b)[w.ti];
+  const on=a.state;
+  ctx.strokeStyle=on?'var(--hi)':'#374663';
+  ctx.strokeStyle=on?'#4ade80':'#374663';
+  ctx.lineWidth=on?3:2;
+  ctx.beginPath();ctx.moveTo(p1[0],p1[1]);
+  const dx=Math.max(40,(p2[0]-p1[0])/2);
+  ctx.bezierCurveTo(p1[0]+dx,p1[1],p2[0]-dx,p2[1],p2[0],p2[1]);
+  ctx.stroke();
+  if(on){ /* signal pulse */
+   const t=(Date.now()/600)%1;
+   const x=bez(p1[0],p1[0]+dx,p2[0]-dx,p2[0],t),y=bez(p1[1],p1[1],p2[1],p2[1],t);
+   ctx.fillStyle='#a7f3d0';ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill();}}
+ /* pending wire */
+ if(wireFrom){
+  const p1=outPort(wireFrom);
+  ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(mx,my);ctx.stroke();
+  ctx.setLineDash([]);}
+ /* nodes */
+ for(const n of nodes){
+  const on=n.state;
+  ctx.fillStyle=n.k==='IN'?(on?'rgba(74,222,128,.14)':'#1b2130'):n.k==='OUT'?(on?'rgba(74,222,128,.2)':'#1b2130'):'#1b2130';
+  ctx.strokeStyle=on&&(n.k==='IN'||n.k==='OUT')?'#4ade80':'#37415c';
+  ctx.lineWidth=1.5;
+  rr(n.x,n.y,NW,NH,10);ctx.fill();ctx.stroke();
+  ctx.fillStyle=on&&(n.k==='IN'||n.k==='OUT')?'#4ade80':'#e9edf6';
+  ctx.font='700 13px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  const lbl=n.k==='IN'?n.label+(on?' ①':' ⓪'):n.k==='OUT'?n.label:n.k;
+  ctx.fillText(lbl,n.x+NW/2,n.y+NH/2);
+  /* ports */
+  inPorts(n).forEach(p=>{ctx.fillStyle='#22d3ee';ctx.beginPath();ctx.arc(p[0],p[1],5,0,7);ctx.fill();});
+  const op=outPort(n);
+  if(op){ctx.fillStyle=on?'#4ade80':'#556080';ctx.beginPath();ctx.arc(op[0],op[1],5,0,7);ctx.fill();}
+  if(n.k==='OUT'){ /* LED glow */
+   if(on){ctx.fillStyle='rgba(74,222,128,.35)';ctx.beginPath();ctx.arc(n.x+NW/2,n.y-14,10,0,7);ctx.fill();}
+   ctx.fillStyle=on?'#4ade80':'#374663';
+   ctx.beginPath();ctx.arc(n.x+NW/2,n.y-14,6,0,7);ctx.fill();}}
+}
+function bez(a,b,c,d,t){const u=1-t;return u*u*u*a+3*u*u*t*b+3*u*t*t*c+t*t*t*d;}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+/* interactions */
+let px=0,py=0;
+function pos(e){const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
+cv.addEventListener('pointerdown',e=>{
+ const [x,y]=pos(e);px=x;py=y;
+ const port=hitPort(x,y);
+ if(port){
+  if(port.type==='out'){wireFrom=port.n;return;}
+  if(port.type==='in'&&wireFrom){connect(wireFrom,port);wireFrom=null;return;}}
+ const n=hitNode(x,y);
+ if(n){drag={n,ox:x-n.x,oy:y-n.y};}});
+cv.addEventListener('pointermove',e=>{
+ const [x,y]=pos(e);mx=x;my=y;
+ if(drag){drag.n.x=x-drag.ox;drag.n.y=y-drag.oy;}});
+cv.addEventListener('pointerup',e=>{
+ const [x,y]=pos(e);
+ if(wireFrom){
+  const moved=Math.hypot(x-px,y-py)>8;
+  const port=hitPort(x,y);
+  if(port&&port.type==='in'){connect(wireFrom,port);wireFrom=null;}
+  else if(moved)wireFrom=null; /* dragged to empty space cancels */
+  /* plain click on the out-port keeps the wire pending for click-click */}
+ drag=null;});
+cv.addEventListener('dblclick',e=>{
+ const [x,y]=pos(e);const n=hitNode(x,y);
+ if(n&&n.k==='IN'){n.state=!n.state;sim();}});
+cv.addEventListener('contextmenu',e=>{
+ e.preventDefault();
+ const [x,y]=pos(e);const n=hitNode(x,y);
+ if(n){nodes=nodes.filter(x2=>x2!==n);
+  wires=wires.filter(w=>w.from!==n.id&&w.to!==n.id);sim();}});
+function connect(fromN,toPort){
+ if(fromN.id===toPort.n.id)return;
+ wires=wires.filter(w=>!(w.to===toPort.n.id&&w.ti===toPort.i));
+ wires.push({from:fromN.id,to:toPort.n.id,ti:toPort.i});
+ sim();}
+/* palette */
+let pending=null;
+document.querySelectorAll('.pitem').forEach(b=>b.onclick=()=>{
+ addNode(b.dataset.k,80+Math.random()*160,60+Math.random()*200);});
+/* truth table */
+$('ttBtn').onclick=()=>{
+ const box=$('tt');
+ if(box.classList.contains('show')){box.classList.remove('show');return;}
+ const ins=nodes.filter(n=>n.k==='IN'),outs=nodes.filter(n=>n.k==='OUT');
+ if(!ins.length||!outs.length){flash('Need at least 1 INPUT and 1 LED');return;}
+ if(ins.length>4){flash('Truth table supports up to 4 inputs');return;}
+ const saved=ins.map(n=>n.state);
+ let h='<table><tr>'+ins.map(n=>'<th>'+n.label+'</th>').join('')+outs.map(n=>'<th>'+n.label+'</th>').join('')+'</tr>';
+ for(let m=0;m<(1<<ins.length);m++){
+  ins.forEach((n,i)=>n.state=!!(m>>(ins.length-1-i)&1));
+  sim();
+  h+='<tr>'+ins.map(n=>'<td class="'+(n.state?'on':'')+'">'+(n.state?1:0)+'</td>').join('')+
+  outs.map(n=>'<td class="'+(n.state?'on':'')+'">'+(n.state?1:0)+'</td>').join('')+'</tr>';}
+ ins.forEach((n,i)=>n.state=saved[i]);sim();
+ $('ttBody').innerHTML=h+'</table>';
+ box.classList.add('show');};
+/* demo: half adder */
+$('demoBtn').onclick=()=>{
+ nodes=[];wires=[];nid=1;
+ addNode('IN',60,80);addNode('IN',60,220);
+ addNode('XOR',280,90);addNode('AND',280,210);
+ addNode('OUT',480,90);addNode('OUT',480,210);
+ const [a,b,x1,a1,s,c]=nodes;
+ s.label='SUM';c.label='CARRY';
+ wires=[{from:a.id,to:x1.id,ti:0},{from:b.id,to:x1.id,ti:1},
+ {from:a.id,to:a1.id,ti:0},{from:b.id,to:a1.id,ti:1},
+ {from:x1.id,to:s.id,ti:0},{from:a1.id,to:c.id,ti:0}];
+ sim();flash('Half adder loaded — double-click inputs A & B!');};
+$('clearBtn').onclick=()=>{nodes=[];wires=[];nid=1;$('tt').classList.remove('show');};
+$('saveBtn').onclick=save;
+addEventListener('keydown',e=>{if(e.key==='Escape')wireFrom=null;});
+function flash(m){$('status').textContent=m;
+ setTimeout(()=>$('status').textContent='click a component to add · drag to move · click output port → input port to wire · double-click INPUT to toggle · right-click deletes',3000);}
+/* boot */
+fit();
+if(!load())$('demoBtn').click();
+sim();
+(function loop(){draw();requestAnimationFrame(loop);})();
+</script></body></html>
