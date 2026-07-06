@@ -1,0 +1,644 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Home Automation — Live Circuit Simulator</title>
+<meta name="description" content="Interactive simulation of an Arduino smart home system: LM35 temperature-controlled fan, PIR motion light, rain-activated window motor, fire alarm with GSM SMS alert — running the real firmware logic in your browser.">
+<meta property="og:title" content="Smart Home Automation System"><meta property="og:description" content="Operate the real circuit in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0a1017;--surface:#101a24;--surface-2:#162432;
+ --border:#1f3346;--border-hi:#2e4a63;
+ --text:#e8f1f8;--text-2:#8fa8bd;--text-3:#54708a;
+ --volt:#22d3ee;--volt-dim:rgba(34,211,238,.12);
+ --hot:#f4655f;--ok:#4ade80;--amber:#fbbf24;
+ --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+ --t:.15s cubic-bezier(.4,0,.2,1);
+ --shadow:0 16px 50px rgba(0,0,0,.5);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;-webkit-font-smoothing:antialiased;
+background-image:radial-gradient(ellipse 60% 35% at 50% -5%,rgba(34,211,238,.09),transparent)}
+:focus-visible{outline:2px solid var(--volt);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.topbar{display:flex;align-items:center;gap:12px;padding:16px max(20px,3vw);flex-wrap:wrap}
+.logo{font-weight:800;font-size:16px;display:flex;gap:9px;align-items:center}
+.logo .mark{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,var(--volt),#0e7490);display:grid;place-items:center;font-size:13px;color:#04222b}
+.spacer{flex:1}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:9px;padding:9px 15px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none;transition:all var(--t)}
+.btn:hover{color:var(--text);border-color:var(--border-hi)}
+.wrap{max-width:1020px;margin:0 auto;padding:8px max(16px,3vw) 60px}
+.hero{text-align:center;padding:14px 0 26px}
+.hero h1{font-size:clamp(24px,4.5vw,36px);font-weight:800;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;color:var(--volt)}
+.hero p{color:var(--text-2);margin-top:8px;max-width:620px;margin-inline:auto;line-height:1.7;font-size:14px}
+.badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.badge{font-size:11px;font-weight:700;font-family:var(--mono);background:var(--surface);border:1px solid var(--border);color:var(--text-2);padding:5px 13px;border-radius:14px}
+/* board */
+.board{display:grid;grid-template-columns:320px 1fr;gap:18px;margin-top:20px}
+@media(max-width:860px){.board{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.panel h2{font-size:11px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.pwr{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.4}}
+/* controls */
+.ctl{margin-bottom:18px}
+.ctl label{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:8px}
+.ctl label b{font-family:var(--mono);color:var(--volt)}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;background:var(--surface-2);border-radius:3px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--volt);border:3px solid var(--bg);box-shadow:0 0 0 1.5px var(--volt)}
+.sw-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;margin-bottom:10px;transition:border-color var(--t)}
+.sw-row.on{border-color:var(--volt)}
+.sw-row .nm{font-size:13px;font-weight:600;display:flex;gap:9px;align-items:center}
+.sw-row .nm small{display:block;font-size:10px;color:var(--text-3);font-family:var(--mono)}
+.tog{width:44px;height:24px;background:var(--bg);border:1.5px solid var(--border-hi);border-radius:13px;position:relative;cursor:pointer;transition:all var(--t);flex-shrink:0}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--text-3);transition:all .18s cubic-bezier(.2,.9,.3,1.2)}
+.tog.on{background:var(--volt-dim);border-color:var(--volt)}
+.tog.on::after{left:22px;background:var(--volt)}
+/* LCD */
+.lcd-shell{background:#0d2b12;border:6px solid #1a1a20;border-radius:10px;padding:12px 14px;box-shadow:inset 0 2px 12px rgba(0,0,0,.6)}
+.lcd{font-family:var(--mono);font-size:clamp(15px,2.6vw,21px);letter-spacing:.24em;line-height:1.7;color:#b7f7c3;text-shadow:0 0 8px rgba(122,255,148,.5);white-space:pre;min-height:2.6em}
+/* devices grid */
+.devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px}
+.dev{background:var(--surface-2);border:1px solid var(--border);border-radius:13px;padding:16px 12px;text-align:center;transition:all var(--t)}
+.dev.live{border-color:var(--volt)}
+.dev .ic{font-size:30px;display:inline-block}
+.dev .nm{font-size:11.5px;font-weight:700;margin-top:8px}
+.dev .st{font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:3px}
+.dev.live .st{color:var(--volt)}
+.fan-ic{transition:transform .1s linear}
+.fan-ic.spin{animation:spin .35s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.buzz.live{animation:shake .12s infinite}
+@keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.led-dot{width:16px;height:16px;border-radius:50%;background:#333;margin:0 auto 6px;transition:all var(--t)}
+.led-dot.on{background:#ffe066;box-shadow:0 0 18px #ffe066,0 0 40px rgba(255,224,102,.5)}
+.window-bar{height:7px;background:var(--bg);border-radius:4px;margin:10px 8px 4px;overflow:hidden}
+.window-fill{height:100%;background:var(--volt);width:0%;transition:width 1s linear;border-radius:4px}
+/* phone / SMS */
+.phone{background:#0c0c12;border:5px solid #22222c;border-radius:18px;padding:14px;min-height:130px;margin-top:16px}
+.phone .ph-h{font-size:10px;color:#555;font-family:var(--mono);text-align:center;margin-bottom:10px}
+.sms{background:#132a1a;border:1px solid #1d4a2c;border-radius:10px;padding:10px 13px;font-size:12px;line-height:1.6;animation:smsIn .35s cubic-bezier(.2,.9,.3,1.15);margin-bottom:8px}
+@keyframes smsIn{from{opacity:0;transform:translateY(10px)}}
+.sms b{color:var(--ok);font-family:var(--mono);font-size:10.5px;display:block}
+.no-sms{color:#3a3a48;font-size:11.5px;text-align:center;padding:20px 0;font-family:var(--mono)}
+/* serial */
+.serial{background:#05080c;border:1px solid var(--border);border-radius:11px;padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.9;color:#3fd68f;height:110px;overflow-y:auto;margin-top:14px}
+.serial .tx{color:#8fa8bd}
+/* sections */
+.section{margin-top:26px}
+.section>h2{font-size:16px;font-weight:800;letter-spacing:-.01em;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section>h2 .ln{flex:1;height:1px;background:var(--border)}
+.code-shell{background:#0a0e14;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.code-h{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11.5px;color:var(--text-3)}
+.code-h .dots{display:flex;gap:5px}
+.code-h .dots i{width:9px;height:9px;border-radius:50%;background:var(--surface-2)}
+.code-h button{margin-left:auto;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);border-radius:7px;padding:5px 12px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer}
+.code-h button:hover{color:var(--volt);border-color:var(--volt)}
+pre.code{padding:16px 18px;font-family:var(--mono);font-size:12px;line-height:1.75;overflow:auto;max-height:420px;color:#c5d5e3}
+pre.code .k{color:#f47067}pre.code .s{color:#96d0ff}pre.code .c{color:#54708a;font-style:italic}pre.code .n{color:#6cb6ff}pre.code .f{color:#dcbdfb}
+.hw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px}
+.hw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;transition:all var(--t)}
+.hw:hover{border-color:var(--border-hi);transform:translateY(-2px)}
+.hw .ic{font-size:23px}
+.hw b{font-size:12.5px;display:block}
+.hw small{font-size:10.5px;color:var(--text-3);font-family:var(--mono)}
+.files{font-family:var(--mono);font-size:12px;line-height:2.1;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px}
+.files .dir{color:var(--volt);font-weight:700}
+.files .fl{color:var(--text-3)}
+
+/* ---------- Proteus-style live schematic ---------- */
+.schem-panel{margin-top:18px}
+.schem-wrap{background:#fdfdf6;border:1px solid var(--border);border-radius:14px;padding:8px;overflow-x:auto}
+.schem-wrap svg{display:block;min-width:900px;width:100%;height:auto;
+ background-image:radial-gradient(circle,#c9d4e0 .8px,transparent .8px);background-size:22px 22px}
+/* Proteus part bodies: cream-yellow fill, dark-red outline */
+.pbody{fill:#fef9d7;stroke:#9c1006;stroke-width:1.4}
+.pname{fill:#1c1cb8;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700}
+.pref{fill:#111;font-family:'JetBrains Mono',monospace;font-size:10px}
+.ppin{stroke:#1c4fd6;stroke-width:1.6}
+.pinlbl{fill:#444;font-family:'JetBrains Mono',monospace;font-size:7.5px}
+/* green wires like Proteus */
+.pw{fill:none;stroke:#1d7a1d;stroke-width:1.8;stroke-linecap:square}
+/* pin logic-state squares — Proteus signature: red=HIGH, blue=LOW */
+.pi{width:7px;height:7px}
+.pi.hi{fill:#e21414}.pi.lo{fill:#1c34d8}
+/* terminal label arrows */
+.term{fill:#fef9d7;stroke:#9c1006;stroke-width:1.2}
+.termtxt{fill:#111;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700}
+/* SIMULINO UNO board */
+.uno{fill:#0f8a96;stroke:#0a5d66;stroke-width:2;rx:8}
+.uno-hdr{fill:#111}
+.uno-txt{fill:#fff;font-family:'JetBrains Mono',monospace;font-weight:700}
+/* LOGICSTATE clickable toggles */
+.lstate{cursor:pointer}
+.lstate rect{fill:#e8e8e8;stroke:#333;stroke-width:1.3}
+.lstate:hover rect{stroke:#e21414;stroke-width:2}
+.lstate .digit{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;text-anchor:middle}
+.lstate.hi .digit{fill:#e21414}.lstate.lo .digit{fill:#1c34d8}
+/* LM35 setpoint arrows */
+.setarrow{cursor:pointer}
+.setarrow rect{fill:#e8e8e8;stroke:#333;stroke-width:1.2}
+.setarrow:hover rect{fill:#ffd7d0}
+.setarrow text{font-size:10px;text-anchor:middle;fill:#111;font-weight:800}
+/* LCD */
+.lcdscr{fill:#123e13}
+.lcdtxt2{fill:#8df79a;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em}
+/* animated bits */
+.rotor2{transform-origin:center;transform-box:fill-box}
+.rotor2.spin{animation:rot 0.4s linear infinite}
+.rotor2.spin-slow{animation:rot 1.1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.ledglow{transition:all .2s}
+.ledglow.on{fill:#ff2a1c;filter:drop-shadow(0 0 7px #ff2a1c)}
+.bz{opacity:0;stroke:#e21414;fill:none;stroke-width:1.4}
+.bz.on{opacity:1;animation:wv .6s ease-out infinite}
+@keyframes wv{from{transform:scale(.6);opacity:.9}to{transform:scale(1.6);opacity:0}}
+.gsm-tx{opacity:0;fill:#1d7a1d;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700}
+.pnote{fill:#8a94a2;font-family:'Inter',sans-serif;font-size:10px;font-style:italic}
+
+footer{text-align:center;padding:26px 16px 20px;font-family:var(--mono);font-size:11.5px;opacity:.55;letter-spacing:.04em}
+footer a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+</style></head><body>
+<header class="topbar">
+ <span class="logo"><span class="mark">⌂</span>Smart Home Automation</span>
+ <span class="spacer"></span>
+ <a class="btn" href="index.html">← Portfolio</a>
+ <a class="btn" href="https://drive.google.com/uc?export=download&id=1q3an0Gg4nl0bXqQg8xL5vlp4dcu48cln" target="_blank" rel="noreferrer">⬇ Project files (.7z)</a>
+</header>
+<div class="wrap">
+ <section class="hero">
+  <h1>Operate the circuit. <em>Right here.</em></h1>
+  <p>This is my Arduino smart home system — built in embedded C, simulated in Proteus, and now running its <b>actual firmware logic</b> in your browser. Flip the sensors below and watch the house react exactly like the real hardware.</p>
+  <div class="badges">
+   <span class="badge">Arduino UNO</span><span class="badge">Embedded C</span><span class="badge">Proteus 8</span>
+   <span class="badge">LM35</span><span class="badge">PIR · Fire · Rain</span><span class="badge">GSM SIM900</span><span class="badge">LCD 16×2</span>
+  </div>
+ </section>
+
+ <div class="board">
+  <div class="panel">
+   <h2><span class="pwr"></span>Sensor inputs — you control these</h2>
+   <div class="ctl">
+    <label>🌡 LM35 Temperature (A5) <b id="tval">28.0 °C</b></label>
+    <input type="range" id="temp" min="10" max="55" step=".5" value="28" aria-label="Temperature">
+   </div>
+   <div class="sw-row" id="row-pir">
+    <span class="nm">🚶 PIR Motion <small>pin 10</small></span>
+    <div class="tog" id="tg-pir" role="switch" aria-checked="false" tabindex="0"></div>
+   </div>
+   <div class="sw-row" id="row-rain">
+    <span class="nm">🌧 Rain Sensor <small>pin 12</small></span>
+    <div class="tog" id="tg-rain" role="switch" aria-checked="false" tabindex="0"></div>
+   </div>
+   <div class="sw-row" id="row-fire">
+    <span class="nm">🔥 Fire / Flame <small>pin 11</small></span>
+    <div class="tog" id="tg-fire" role="switch" aria-checked="false" tabindex="0"></div>
+   </div>
+   <div class="phone">
+    <div class="ph-h">▂ ▄ ▆ GSM SIM900 → +91 99225 xxxxx</div>
+    <div id="smsbox"><div class="no-sms">no messages yet — trigger the fire sensor</div></div>
+   </div>
+  </div>
+  <div class="panel">
+   <h2>System response — LCD, actuators &amp; serial</h2>
+   <div class="lcd-shell"><div class="lcd" id="lcd">Home Automation
+   SYSTEM</div></div>
+   <div class="devices">
+    <div class="dev" id="d-fan"><span class="ic fan-ic" id="fanic">🌀</span><div class="nm">DC Fan</div><div class="st" id="s-fan">OFF · A0/A1</div></div>
+    <div class="dev" id="d-led"><div class="led-dot" id="leddot"></div><div class="nm">Room Light</div><div class="st" id="s-led">OFF · pin 2</div></div>
+    <div class="dev" id="d-win"><span class="ic">🪟</span><div class="nm">Window Motor</div><div class="window-bar"><div class="window-fill" id="winfill"></div></div><div class="st" id="s-win">IDLE · A3/A4</div></div>
+    <div class="dev buzz" id="d-buz"><span class="ic">🚨</span><div class="nm">Buzzer</div><div class="st" id="s-buz">SILENT · pin 3</div></div>
+   </div>
+   <div class="serial" id="serial"><span class="tx">// Serial monitor @9600 baud — AT commands appear here when GSM fires</span></div>
+  </div>
+ </div>
+
+
+ <section class="section schem-panel">
+  <h2>The Proteus schematic — live &amp; fully working <span class="ln"></span></h2>
+  <div class="schem-wrap"><svg viewBox="0 0 1150 800" role="img" aria-label="Proteus circuit schematic, interactive">
+
+   <!-- ============ SIMULINO UNO (center) ============ -->
+   <rect x="470" y="150" width="190" height="440" class="uno"/>
+   <rect x="470" y="150" width="190" height="26" fill="#0a5d66"/>
+   <text x="565" y="168" text-anchor="middle" class="uno-txt" font-size="12">SIMULINO UNO</text>
+   <text x="565" y="196" text-anchor="middle" class="uno-txt" font-size="8" opacity=".8">ARDUINO · ATmega328P · www.arduino.cc</text>
+   <rect x="474" y="205" width="10" height="370" class="uno-hdr"/>
+   <rect x="646" y="205" width="10" height="370" class="uno-hdr"/>
+   <!-- left analog pins -->
+   <text x="492" y="232" class="pinlbl" font-size="9" fill="#fff">A0</text>
+   <text x="492" y="262" class="pinlbl" font-size="9" fill="#fff">A1</text>
+   <text x="492" y="292" class="pinlbl" font-size="9" fill="#fff">A3</text>
+   <text x="492" y="322" class="pinlbl" font-size="9" fill="#fff">A4</text>
+   <text x="492" y="352" class="pinlbl" font-size="9" fill="#fff">A5</text>
+   <text x="492" y="552" class="pinlbl" font-size="9" fill="#fff">GND</text>
+   <!-- right digital pins -->
+   <text x="640" y="232" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D12</text>
+   <text x="640" y="262" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D11</text>
+   <text x="640" y="292" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D10</text>
+   <text x="640" y="322" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D9–D4 (LCD)</text>
+   <text x="640" y="472" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D3</text>
+   <text x="640" y="502" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">D2</text>
+   <text x="640" y="532" text-anchor="end" class="pinlbl" font-size="9" fill="#fff">TX/D1</text>
+   <!-- pin state squares -->
+   <rect id="pi-a0" class="pi lo" x="460" y="222"/><rect id="pi-a1" class="pi lo" x="460" y="252"/>
+   <rect id="pi-a3" class="pi lo" x="460" y="282"/><rect id="pi-a4" class="pi lo" x="460" y="312"/>
+   <rect id="pi-a5" class="pi hi" x="460" y="342"/>
+   <rect id="pi-d12" class="pi lo" x="662" y="222"/><rect id="pi-d11" class="pi lo" x="662" y="252"/>
+   <rect id="pi-d10" class="pi lo" x="662" y="282"/><rect id="pi-lcd" class="pi hi" x="662" y="312"/>
+   <rect id="pi-d3" class="pi lo" x="662" y="462"/><rect id="pi-d2" class="pi lo" x="662" y="492"/>
+   <rect id="pi-tx" class="pi lo" x="662" y="522"/>
+
+   <!-- ============ LM35 (U1) top-left ============ -->
+   <rect x="60" y="90" width="120" height="70" class="pbody"/>
+   <text x="120" y="108" text-anchor="middle" class="pname">LM35</text>
+   <text x="66" y="122" class="pref">U1</text>
+   <text id="p-tval" x="120" y="140" text-anchor="middle" class="pref" font-size="12" fill="#9c1006">28.0°C</text>
+   <g id="t-up" class="setarrow"><rect x="184" y="96" width="20" height="20"/><text x="194" y="110">▲</text></g>
+   <g id="t-dn" class="setarrow"><rect x="184" y="122" width="20" height="20"/><text x="194" y="136">▼</text></g>
+   <path class="pw" d="M180 152 H300 V347 H460"/>
+   <text x="240" y="147" class="termtxt">VOUT → A5</text>
+
+   <!-- ============ PIR1 + LOGICSTATE ============ -->
+   <rect x="60" y="200" width="120" height="62" class="pbody"/>
+   <text x="120" y="218" text-anchor="middle" class="pname">PIR SENSOR</text>
+   <text x="66" y="232" class="pref">PIR1 · TEP</text>
+   <text x="66" y="250" class="pinlbl">TestPin&nbsp;&nbsp;&nbsp;OUT</text>
+   <g id="ls-pir" class="lstate lo"><rect x="14" y="216" width="30" height="30"/><text class="digit" x="29" y="237">0</text></g>
+   <path class="pw" d="M44 231 H60"/>
+   <path class="pw" d="M180 246 H240"/>
+   <path d="M240 240 l16 6 -16 6 z" class="term"/><text x="260" y="250" class="termtxt">GPIO10</text>
+   <path d="M436 285 l16 6 -16 6 z" class="term" transform="rotate(180 444 291)"/><text x="380" y="288" class="termtxt">GPIO10</text>
+   <path class="pw" d="M444 291 H460"/>
+
+   <!-- ============ GAS1 (MQ-3, fire sensor) + LOGICSTATE ============ -->
+   <rect x="60" y="300" width="120" height="62" class="pbody"/>
+   <text x="120" y="318" text-anchor="middle" class="pname">MQ-3 GAS SENSOR</text>
+   <text x="66" y="332" class="pref">GAS1 · fire detect</text>
+   <text x="66" y="350" class="pinlbl">TestPin&nbsp;&nbsp;&nbsp;OUT</text>
+   <g id="ls-fire" class="lstate lo"><rect x="14" y="316" width="30" height="30"/><text class="digit" x="29" y="337">0</text></g>
+   <path class="pw" d="M44 331 H60"/>
+   <path class="pw" d="M180 346 H240"/>
+   <path d="M240 340 l16 6 -16 6 z" class="term"/><text x="260" y="350" class="termtxt">GPIO11</text>
+   <path d="M436 255 l16 6 -16 6 z" class="term" transform="rotate(180 444 261)"/><text x="380" y="258" class="termtxt">GPIO11</text>
+   <path class="pw" d="M444 261 H460"/>
+
+   <!-- ============ RAIN10 + LOGICSTATE ============ -->
+   <rect x="60" y="400" width="120" height="62" class="pbody"/>
+   <text x="120" y="418" text-anchor="middle" class="pname">RAIN SENSOR</text>
+   <text x="66" y="432" class="pref">RAIN10 · TEP</text>
+   <text x="66" y="450" class="pinlbl">TestPin&nbsp;&nbsp;&nbsp;OUT</text>
+   <g id="ls-rain" class="lstate lo"><rect x="14" y="416" width="30" height="30"/><text class="digit" x="29" y="437">0</text></g>
+   <path class="pw" d="M44 431 H60"/>
+   <path class="pw" d="M180 446 H240"/>
+   <path d="M240 440 l16 6 -16 6 z" class="term"/><text x="260" y="450" class="termtxt">GPIO12</text>
+   <path d="M436 225 l16 6 -16 6 z" class="term" transform="rotate(180 444 231)"/><text x="380" y="228" class="termtxt">GPIO12</text>
+   <path class="pw" d="M444 231 H460"/>
+
+   <!-- ============ SIM900D (U2) bottom-left ============ -->
+   <rect x="40" y="530" width="180" height="110" class="pbody"/>
+   <text x="130" y="550" text-anchor="middle" class="pname">SIM900D</text>
+   <text x="46" y="564" class="pref">U2 · GSM Module</text>
+   <text x="46" y="582" class="pinlbl">RXD&nbsp;&nbsp;TXD&nbsp;&nbsp;GND</text>
+   <text id="p-gsmtx" class="gsm-tx" x="130" y="604" text-anchor="middle">AT+CMGS… ▶ SMS</text>
+   <rect x="52" y="612" width="156" height="20" fill="#123e13"/>
+   <text id="p-gsmscr" x="60" y="626" class="lcdtxt2" font-size="8.5">READY</text>
+   <path class="pw" d="M100 530 V500 H240"/>
+   <path d="M240 494 l16 6 -16 6 z" class="term"/><text x="260" y="504" class="termtxt">TXD</text>
+   <path d="M436 525 l16 6 -16 6 z" class="term" transform="rotate(180 444 531)"/><text x="396" y="528" class="termtxt">TXD</text>
+   <path class="pw" d="M444 531 H460"/>
+
+   <!-- ============ LM016L LCD (top-right) ============ -->
+   <rect x="740" y="70" width="360" height="120" class="pbody"/>
+   <text x="920" y="88" text-anchor="middle" class="pname">LM016L</text>
+   <text x="746" y="88" class="pref">LCD1</text>
+   <rect x="756" y="96" width="328" height="62" class="lcdscr"/>
+   <text id="p-lcd1" x="768" y="122" class="lcdtxt2">Home Automation</text>
+   <text id="p-lcd2" x="768" y="144" class="lcdtxt2">   SYSTEM</text>
+   <text x="756" y="180" class="pinlbl">VSS VDD VEE&nbsp; RS RW E &nbsp;D4 D5 D6 D7</text>
+   <path class="pw" d="M660 318 H700 V196 H900 V190"/>
+   <text x="705" y="240" class="termtxt" transform="rotate(90 705 240)">6-wire bus · D4–D9</text>
+
+   <!-- ============ D1 LED-RED + R1 ============ -->
+   <path class="pw" d="M660 498 H760"/>
+   <rect x="760" y="490" width="52" height="16" class="pbody"/>
+   <text x="786" y="484" text-anchor="middle" class="pref">R1 · 220R</text>
+   <path class="pw" d="M812 498 H860"/>
+   <circle id="p-led" cx="878" cy="498" r="11" class="ledglow" fill="#5a1410" stroke="#9c1006" stroke-width="1.5"/>
+   <path d="M872 492 l12 12 M884 492 l-12 12" stroke="#fef9d7" stroke-width="1.2" opacity=".4"/>
+   <text x="900" y="494" class="pname" font-size="9.5">LED-RED</text>
+   <text x="900" y="506" class="pref">D1 · room light</text>
+   <path class="pw" d="M889 498 H1060 V540"/>
+
+   <!-- ============ BUZ1 ============ -->
+   <path class="pw" d="M660 468 H760 V430"/>
+   <circle cx="760" cy="415" r="15" class="pbody"/>
+   <circle cx="760" cy="415" r="5" fill="#9c1006"/>
+   <circle id="p-bz" class="bz" cx="760" cy="415" r="20"/>
+   <text x="782" y="412" class="pname" font-size="9.5">BUZZER</text>
+   <text x="782" y="424" class="pref">BUZ1 · TEP</text>
+
+   <!-- ============ U3 L293D + motors ============ -->
+   <rect x="740" y="560" width="120" height="150" class="pbody"/>
+   <text x="800" y="580" text-anchor="middle" class="pname">L293D</text>
+   <text x="746" y="594" class="pref">U3 · DIL16</text>
+   <text x="746" y="612" class="pinlbl">IN1</text><text x="746" y="632" class="pinlbl">IN2</text>
+   <text x="746" y="652" class="pinlbl">IN3</text><text x="746" y="672" class="pinlbl">IN4</text>
+   <text x="836" y="612" class="pinlbl">OUT1</text><text x="836" y="652" class="pinlbl">OUT3</text>
+   <!-- DC1..DC4 terminals from UNO A0..A4 -->
+   <path class="pw" d="M460 227 H420"/><path d="M420 221 l-16 6 16 6 z" class="term"/><text x="368" y="230" class="termtxt">DC1</text>
+   <path class="pw" d="M460 257 H420"/><path d="M420 251 l-16 6 16 6 z" class="term"/><text x="368" y="260" class="termtxt">DC2</text>
+   <path class="pw" d="M460 287 H420"/><path d="M420 281 l-16 6 16 6 z" class="term"/><text x="368" y="290" class="termtxt">DC3</text>
+   <path class="pw" d="M460 317 H420"/><path d="M420 311 l-16 6 16 6 z" class="term"/><text x="368" y="320" class="termtxt">DC4</text>
+   <path d="M706 602 l16 6 -16 6 z" class="term"/><text x="678" y="612" class="termtxt">DC1</text><path class="pw" d="M722 608 H740"/>
+   <path d="M706 622 l16 6 -16 6 z" class="term"/><text x="678" y="632" class="termtxt">DC2</text><path class="pw" d="M722 628 H740"/>
+   <path d="M706 642 l16 6 -16 6 z" class="term"/><text x="678" y="652" class="termtxt">DC3</text><path class="pw" d="M722 648 H740"/>
+   <path d="M706 662 l16 6 -16 6 z" class="term"/><text x="678" y="672" class="termtxt">DC4</text><path class="pw" d="M722 668 H740"/>
+   <!-- window motor M1 -->
+   <path class="pw" d="M860 608 H920"/>
+   <circle cx="945" cy="608" r="22" class="pbody"/>
+   <g id="p-winrot" class="rotor2"><path d="M945 590 v36 M927 608 h36" stroke="#9c1006" stroke-width="3"/></g>
+   <text x="975" y="602" class="pname" font-size="9.5">MOTOR</text>
+   <text x="975" y="614" class="pref">M1 · window · 6 REVS</text>
+   <!-- fan motor M2 -->
+   <path class="pw" d="M860 648 H900 V668 H920"/>
+   <circle cx="945" cy="668" r="22" class="pbody"/>
+   <g id="p-fanrot" class="rotor2"><path d="M945 650 v36 M927 668 h36 M932 655 l26 26 M958 655 l-26 26" stroke="#9c1006" stroke-width="2.4"/></g>
+   <text x="975" y="662" class="pname" font-size="9.5">MOTOR</text>
+   <text x="975" y="674" class="pref">M2 · fan · 12Ω load</text>
+
+   <!-- ============ power rails + caps ============ -->
+   <path class="pw" d="M565 590 V740 H60 M565 740 H1090" opacity=".55"/>
+   <text x="572" y="756" class="pref" fill="#1c4fd6">GND</text>
+   <rect x="240" y="726" width="8" height="28" class="pbody"/><text x="254" y="742" class="pref">C1 100uF</text>
+   <rect x="330" y="726" width="8" height="28" class="pbody"/><text x="344" y="742" class="pref">C2</text>
+   <rect x="410" y="722" width="40" height="12" class="pbody"/><text x="414" y="718" class="pref">R4 10k</text>
+   <text x="740" y="756" class="pnote">Recreated 1:1 from ROOT.DSN — red squares = logic HIGH, blue = LOW (like Proteus). Click the LOGICSTATE boxes & LM35 ▲▼.</text>
+  </svg></div>
+ </section>
+ <section class="section">
+  <h2>The firmware <span class="ln"></span></h2>
+  <div class="code-shell">
+   <div class="code-h"><span class="dots"><i></i><i></i><i></i></span>Home_Automation_Arduino_code.ino<button onclick="copyCode()">⧉ Copy</button></div>
+   <pre class="code" id="code"></pre>
+  </div>
+ </section>
+
+ <section class="section">
+  <h2>Hardware used <span class="ln"></span></h2>
+  <div class="hw-grid">
+   <div class="hw"><span class="ic">🎛</span><span><b>Arduino UNO</b><small>ATmega328P @16MHz</small></span></div>
+   <div class="hw"><span class="ic">🌡</span><span><b>LM35 Sensor</b><small>analog temp → A5</small></span></div>
+   <div class="hw"><span class="ic">🚶</span><span><b>PIR HC-SR501</b><small>motion → D10</small></span></div>
+   <div class="hw"><span class="ic">🔥</span><span><b>Flame Sensor</b><small>fire → D11</small></span></div>
+   <div class="hw"><span class="ic">🌧</span><span><b>Rain Module</b><small>rain → D12</small></span></div>
+   <div class="hw"><span class="ic">📟</span><span><b>LCD 16×2 HD44780</b><small>D4–D9, 4-bit mode</small></span></div>
+   <div class="hw"><span class="ic">📡</span><span><b>GSM SIM900</b><small>SMS via AT cmds, 9600 baud</small></span></div>
+   <div class="hw"><span class="ic">🌀</span><span><b>2× DC Motors + L293D</b><small>fan A0/A1 · window A3/A4</small></span></div>
+   <div class="hw"><span class="ic">🚨</span><span><b>Buzzer + LED</b><small>alarm D3 · light D2</small></span></div>
+  </div>
+ </section>
+
+ <section class="section">
+  <h2>Project files <span class="ln"></span></h2>
+  <div class="files">
+<span class="dir">📁 Smart_Home_Automation/</span>
+├── Arduino_Home_Automation.pdsprj <span class="fl">— Proteus 8 circuit &amp; simulation</span>
+├── <span class="dir">Home_Automation_Arduino_code/</span> Home_Automation_Aruduino_code.ino <span class="fl">— firmware (this page runs it!)</span>
+├── <span class="dir">Arduino_Library/</span> ARDUINO2.LIB / .IDX <span class="fl">— Arduino model for Proteus</span>
+├── <span class="dir">Gas Sensor Library/</span> GasSensorsTEP .LIB/.HEX/.IDX
+├── <span class="dir">GSM Library/</span> GSMLibraryTEP .LIB/.HEX/.IDX
+├── <span class="dir">PIR Sensor Library/</span> PIRSensorTEP .LIB/.HEX/.IDX
+└── <span class="dir">Rain_Sensor_library/</span> RainSensorsTEP .LIB/.HEX/.IDX
+  </div>
+ </section>
+</div>
+<footer>Designed &amp; Built by <a href="https://github.com/virtualYadav" target="_blank" rel="noreferrer">Anuj Yadav</a></footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+/* ---------------- state (mirrors the .ino) ---------------- */
+let temp=28,pir=false,fire=false,rain=false;
+let fanOn=false,ledOn=false,buzzOn=false,winBusy=false,smsSent=false,winPos=0;
+/* toggles */
+function bindTog(id,rowId,setter){
+ const el=$(id),row=$(rowId);
+ const flip=()=>{const v=setter();el.classList.toggle('on',v);row.classList.toggle('on',v);
+  el.setAttribute('aria-checked',v);};
+ el.addEventListener('click',flip);
+ el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();flip();}});}
+bindTog('tg-pir','row-pir',()=>pir=!pir);
+bindTog('tg-fire','row-fire',()=>{fire=!fire;if(!fire)smsSent=false;return fire;});
+bindTog('tg-rain','row-rain',()=>rain=!rain);
+$('temp').addEventListener('input',e=>{temp=+e.target.value;$('tval').textContent=temp.toFixed(1)+' °C';});
+/* LCD renderer — 16x2, centred like lcd.print + setCursor(3,2) quirk */
+function lcdShow(l1,l2){$('lcd').textContent=(l1||'').slice(0,16)+'\n'+(l2||'').slice(0,16);}
+/* serial */
+function serialLn(s,cls){const d=document.createElement('div');
+ if(cls)d.className=cls;d.textContent=s;
+ $('serial').appendChild(d);$('serial').scrollTop=$('serial').scrollHeight;
+ while($('serial').children.length>40)$('serial').removeChild($('serial').firstChild);}
+/* SMS */
+function sendSms(){
+ if(smsSent)return;smsSent=true;
+ serialLn('AT+CMGF=1');serialLn('AT+CMGS="+91xxxxxxxxxx"');serialLn('> Fire Detected in home');
+ const box=$('smsbox');
+ if(box.querySelector('.no-sms'))box.innerHTML='';
+ const d=document.createElement('div');d.className='sms';
+ d.innerHTML='<b>⚠ SMS from SIM900 · now</b>Fire Detected in home';
+ box.prepend(d);
+ while(box.children.length>3)box.removeChild(box.lastChild);}
+/* ---------------- the loop() — faithful to the firmware ---------------- */
+/* The real code redraws the LCD several times per loop (temp → rain → PIR → fire).
+   We phase those prints over time so you can read them, same order, same logic. */
+let phase=0;
+function loop(){
+ /* temperature → fan (threshold 35°C, exactly like the .ino) */
+ fanOn=temp>35;
+ $('fanic').classList.toggle('spin',fanOn);
+ $('d-fan').classList.toggle('live',fanOn);
+ $('s-fan').textContent=fanOn?'ON · dc3 HIGH':'OFF · A0/A1';
+ /* PIR → LED */
+ ledOn=pir;
+ $('leddot').classList.toggle('on',ledOn);
+ $('d-led').classList.toggle('live',ledOn);
+ $('s-led').textContent=ledOn?'ON · pin2 HIGH':'OFF · pin 2';
+ /* rain → window motor: 1s pulse then stop (dc1 HIGH 1000ms) */
+ if(rain&&!winBusy){winBusy=true;
+  $('d-win').classList.add('live');$('s-win').textContent='RUNNING · dc1 HIGH';
+  winPos=Math.min(100,winPos+50);
+  $('winfill').style.width=winPos+'%';
+  setTimeout(()=>{winBusy=false;
+   $('d-win').classList.remove('live');
+   $('s-win').textContent='STOPPED · '+winPos+'% closed';},1000);}
+ if(!rain&&winPos>0&&!winBusy){winPos=0;$('winfill').style.width='0%';$('s-win').textContent='IDLE · A3/A4';}
+ /* fire → buzzer + GSM SMS */
+ buzzOn=fire;
+ $('d-buz').classList.toggle('live',buzzOn);
+ $('s-buz').textContent=buzzOn?'ALARM! · pin3 HIGH':'SILENT · pin 3';
+ if(fire)sendSms();
+ /* LCD message sequence — same print order as the firmware */
+ const msgs=[['Temperature',(temp*1).toFixed(2)+' C']];
+ if(rain)msgs.push(['Rain Detected','']);
+ msgs.push(pir?['Person Detected','']:['Person not','Detected']);
+ msgs.push(fire?['fire detected','']:['fire not','Detected']);
+ phase=(phase+1)%msgs.length;
+ lcdShow(msgs[phase][0],msgs[phase][1]);
+ schematic();
+}
+
+/* ---------- Proteus schematic bindings ---------- */
+const pin=(id,on)=>{const el=$(id);if(!el)return;
+ el.classList.toggle('hi',!!on);el.classList.toggle('lo',!on);};
+const lstate=(id,on)=>{const g=$(id);if(!g)return;
+ g.classList.toggle('hi',!!on);g.classList.toggle('lo',!on);
+ g.querySelector('.digit').textContent=on?'1':'0';};
+function schematic(){
+ /* pin logic squares — red HIGH / blue LOW, exactly like Proteus */
+ pin('pi-a5',true);
+ pin('pi-d10',pir);pin('pi-d11',fire);pin('pi-d12',rain);
+ pin('pi-d2',ledOn);pin('pi-d3',buzzOn);
+ pin('pi-a0',winBusy);pin('pi-a1',false);
+ pin('pi-a3',fanOn);pin('pi-a4',false);
+ pin('pi-tx',fire);pin('pi-lcd',true);
+ /* LOGICSTATE toggles mirror sensor state */
+ lstate('ls-pir',pir);lstate('ls-fire',fire);lstate('ls-rain',rain);
+ /* LM35 readout */
+ $('p-tval').textContent=temp.toFixed(1)+'°C';
+ /* actuators */
+ $('p-led').classList.toggle('on',ledOn);
+ $('p-bz').classList.toggle('on',buzzOn);
+ $('p-fanrot').classList.toggle('spin',fanOn);
+ $('p-winrot').classList.toggle('spin-slow',winBusy);
+ /* GSM screen */
+ $('p-gsmtx').style.opacity=fire?1:0;
+ $('p-gsmscr').textContent=fire?'> SMS: Fire Detected in home':'READY';
+ /* LCD mirror */
+ const t=$('lcd').textContent.split('\n');
+ $('p-lcd1').textContent=t[0]||'';
+ $('p-lcd2').textContent=t[1]||'';
+}
+/* interactive: LOGICSTATE clicks + LM35 setpoint arrows (like real Proteus) */
+[['ls-pir','tg-pir'],['ls-fire','tg-fire'],['ls-rain','tg-rain']].forEach(([g,t])=>{
+ const el=$(g);if(el)el.addEventListener('click',()=>$(t).click());});
+const bumpT=d=>{temp=Math.max(10,Math.min(55,temp+d));
+ $('temp').value=temp;$('tval').textContent=temp.toFixed(1)+' °C';schematic();};
+$('t-up')&&$('t-up').addEventListener('click',()=>bumpT(2));
+$('t-dn')&&$('t-dn').addEventListener('click',()=>bumpT(-2));
+
+setInterval(loop,900);
+loop();
+/* ---------------- firmware source (verbatim) ---------------- */
+const SRC=`#include <LiquidCrystal.h>
+LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
+
+const int led_Pin = 2;
+const int buzzer_Pin = 3;
+const int pir_Sensor = 10;
+const int fire_Sensor = 11;
+const int rain_Sensor = 12;
+const int temp_pin = A5;
+const int dc1 = A0;
+const int dc2 = A1;
+const int dc3 = A3;
+const int dc4 = A4;
+bool pir_status = LOW;
+bool fire_Status = LOW;
+bool rain_Status = LOW;
+float temperature;
+
+void setup() {
+  pinMode(temp_pin, INPUT);
+  pinMode(led_Pin, OUTPUT);
+  pinMode(buzzer_Pin, OUTPUT);
+  pinMode(pir_Sensor, INPUT);
+  pinMode(fire_Sensor, INPUT);
+  pinMode(rain_Sensor, INPUT);
+  pinMode(dc1, OUTPUT);
+  pinMode(dc2, OUTPUT);
+  pinMode(dc3, OUTPUT);
+  pinMode(dc4, OUTPUT);
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  lcd.print("Home Automation");
+  lcd.setCursor(3,2);
+  lcd.print("SYSTEM");
+  delay(500);
+}
+
+void loop()
+{
+  pir_status = digitalRead(pir_Sensor);
+  fire_Status = digitalRead(fire_Sensor);
+  rain_Status = digitalRead(rain_Sensor);
+  temperature = analogRead(temp_pin);
+  temperature = (temperature*500)/1023;   // LM35: 10mV per C
+  lcd.clear();
+  lcd.print("Temperature");
+  lcd.setCursor(3,2);
+  lcd.print(temperature);
+  delay(200);
+
+  if(temperature > 35) {                  // auto fan
+    digitalWrite(dc3, HIGH);
+    digitalWrite(dc4, LOW);
+  } else {
+    digitalWrite(dc3, LOW);
+    digitalWrite(dc4, LOW);
+  }
+
+  if(rain_Status == HIGH) {               // close window for 1s
+    lcd.clear();
+    lcd.print("Rain Detected");
+    digitalWrite(dc1, HIGH);
+    digitalWrite(dc2, LOW);
+    delay(1000);
+    digitalWrite(dc1, LOW);
+    digitalWrite(dc2, LOW);
+  }
+
+  if(pir_status == HIGH) {                // motion light
+    lcd.clear();
+    lcd.print("Person Detected");
+    digitalWrite(led_Pin, HIGH);
+  } else {
+    lcd.clear();
+    lcd.print("Person not ");
+    lcd.setCursor(0,2);
+    lcd.print("Detected");
+    digitalWrite(led_Pin, LOW);
+  }
+
+  if(fire_Status == HIGH) {               // fire alarm + SMS
+    lcd.clear();
+    lcd.print("fire detected");
+    digitalWrite(buzzer_Pin, HIGH);
+    Serial.println("AT+CMGF=1");          // GSM text mode
+    delay(100);
+    Serial.println("AT+CMGS=\\"+91xxxxxxxxxx\\"\\r");
+    delay(100);
+    Serial.println("Fire Detected in home ");
+    delay(100);
+  } else {
+    lcd.clear();
+    lcd.print("fire not ");
+    lcd.setCursor(0,2);
+    lcd.print("Detected");
+    digitalWrite(buzzer_Pin, LOW);
+  }
+}`;
+function hl(src){
+ let s=src.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ s=s.replace(/(\/\/[^\n]*)/g,'<span class="c">$1</span>');
+ s=s.replace(/("(?:[^"\\]|\\.)*")/g,'<span class="s">$1</span>');
+ s=s.replace(/\b(void|const|int|float|bool|if|else|return|include)\b/g,'<span class="k">$1</span>');
+ s=s.replace(/\b(\d+)\b/g,'<span class="n">$1</span>');
+ s=s.replace(/\b(setup|loop|pinMode|digitalWrite|digitalRead|analogRead|delay|print|println|begin|clear|setCursor)\b(?=\()/g,'<span class="f">$1</span>');
+ return s;}
+$('code').innerHTML=hl(SRC);
+function copyCode(){
+ try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(SRC);return;}}catch(e){}
+ const ta=document.createElement('textarea');ta.value=SRC;document.body.appendChild(ta);
+ ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+</script></body></html>
