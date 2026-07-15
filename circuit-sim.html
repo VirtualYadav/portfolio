@@ -1,263 +1,1912 @@
-<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VoltLab — Build logic, watch it think</title>
-<meta name="description" content="VoltLab is a real-time digital logic simulator: drag AND/OR/NOT/XOR gates onto the canvas, wire them up, flip switches and watch signals propagate live. Includes truth-table generation and circuit saving.">
-<meta property="og:title" content="VoltLab"><meta property="og:description" content="Build logic, watch it think.">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>VoltLab SPICE — High-Fidelity Circuit & Logic CAD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root{
- --bg:#0b0e14;--surface:#131722;--surface-2:#1b2130;
- --border:#252c3f;--border-hi:#37415c;
- --text:#e9edf6;--text-2:#93a0bd;--text-3:#556080;
- --volt:#22d3ee;--volt-dim:rgba(34,211,238,.13);
- --hi:#4ade80;--lo:#374663;--danger:#f4655f;
- --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
- --t:.14s cubic-bezier(.4,0,.2,1);
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #21262d;
+  --border: #30363d;
+  --border-hi: #58a6ff;
+  --text: #c9d1d9;
+  --text-2: #8b949e;
+  --text-3: #484f58;
+  --volt: #58a6ff;
+  --hi: #3fb950;
+  --lo: #f85149;
+  --font: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
-:focus-visible{outline:2px solid var(--volt);outline-offset:2px;border-radius:4px}
-.topbar{display:flex;align-items:center;gap:10px;padding:11px max(14px,2vw);background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
-.logo{font-weight:800;font-size:15.5px;display:flex;gap:8px;align-items:center}
-.logo b{color:var(--volt)}
-.spacer{flex:1}
-.btn{border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);border-radius:9px;padding:8px 14px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;transition:all var(--t)}
-.btn:hover{color:var(--text);border-color:var(--border-hi)}
-.btn.pri{background:var(--volt);border-color:var(--volt);color:#04222b}
-.btn.pri:hover{filter:brightness(1.1)}
-.main{flex:1;display:flex;overflow:hidden}
-.palette{width:150px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:12px 10px;overflow-y:auto}
-.palette .h{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;padding:6px 4px}
-.pitem{display:flex;align-items:center;gap:9px;width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);border-radius:9px;padding:9px 10px;font-family:var(--mono);font-size:12px;font-weight:700;cursor:grab;margin-bottom:6px;transition:all var(--t)}
-.pitem:hover{border-color:var(--volt);color:var(--volt);transform:translateX(2px)}
-.stage{flex:1;position:relative}
-canvas{display:block;width:100%;height:100%;cursor:default}
-.status{position:absolute;bottom:10px;left:12px;font-family:var(--mono);font-size:11px;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;pointer-events:none}
-.tt{position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border-hi);border-radius:12px;padding:14px;display:none;max-height:70%;overflow:auto;box-shadow:0 16px 50px rgba(0,0,0,.5)}
-.tt.show{display:block}
-.tt h3{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
-.tt table{border-collapse:collapse;font-family:var(--mono);font-size:12px}
-.tt th,.tt td{border:1px solid var(--border);padding:4px 12px;text-align:center}
-.tt th{color:var(--volt)}
-.tt td.on{color:var(--hi);font-weight:700}
-@media(max-width:640px){.palette{width:110px}.pitem{font-size:10.5px;padding:8px 7px}}
-</style></head><body>
+* { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; -webkit-user-select: none; user-select: none; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.logo {
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--volt);
+}
+.logo span {
+  font-size: 9px;
+  padding: 1px 6px;
+  background: #1f6feb;
+  color: #ffffff;
+  border-radius: 12px;
+  font-weight: bold;
+}
+.spacer { flex: 1; }
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn:hover {
+  color: #ffffff;
+  border-color: var(--border-hi);
+  background: #30363d;
+}
+.btn.active {
+  background: #1f6feb;
+  color: #ffffff;
+  border-color: #58a6ff;
+}
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.sidebar {
+  width: 175px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-search input {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font);
+  font-size: 11px;
+}
+.section-header {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--volt);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 10px 12px 4px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(88, 166, 255, 0.03);
+}
+.pitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.1s;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.3);
+}
+.pitem:hover {
+  color: #ffffff;
+  background: var(--surface-2);
+}
+.stage-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.status-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  background: rgba(22, 27, 34, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.status-badge {
+  background: #21262d;
+  color: var(--volt);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 8.5px;
+  font-weight: bold;
+  border: 1px solid var(--border);
+}
+.warning-badge {
+  background: #f85149;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 8.5px;
+  font-weight: bold;
+  display: none;
+}
+.floating-panel {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  z-index: 80;
+}
+.waveform-panel {
+  bottom: 50px;
+  right: 10px;
+  width: 300px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.waveform-header {
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--text-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.waveform-canvas {
+  flex: 1;
+  background: #090d13;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.floating-editor {
+  top: 10px;
+  right: 10px;
+  width: 200px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.floating-editor h4 {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--volt);
+}
+.floating-editor input {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  width: 100%;
+}
+.delete-btn {
+  position: absolute;
+  background: var(--lo);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  display: none;
+  z-index: 100;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.modal-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+.modal h3 {
+  color: var(--volt);
+  margin-bottom: 12px;
+}
+.modal p, .modal ul {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.modal ul {
+  padding-left: 20px;
+}
+.minimap-panel {
+  position: absolute;
+  bottom: 210px;
+  right: 10px;
+  width: 120px;
+  height: 90px;
+  background: rgba(19, 23, 34, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 75;
+  pointer-events: none;
+}
+.minimap-canvas {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+@media(max-width: 768px) {
+  .sidebar { width: 140px; }
+  .waveform-panel { width: 240px; height: 120px; }
+}
+</style>
+</head>
+<body>
 <header class="topbar">
- <span class="logo">⚡ Volt<b>Lab</b></span>
+ <div class="logo">⚡ Volt<b>SPICE</b> <span>v5.0 SPICE</span></div>
+ <button class="btn" id="wireModeBtn">🔗 Wire Mode: Off</button>
+ <button class="btn" id="undoBtn">↶ Undo</button>
+ <button class="btn" id="redoBtn">↷ Redo</button>
+ <button class="btn" id="zoomInBtn">➕ Zoom In</button>
+ <button class="btn" id="zoomOutBtn">➖ Zoom Out</button>
+ <button class="btn" id="fitViewBtn">🔲 Fit View</button>
+ <button class="btn" id="helpBtn">❓ Help</button>
  <span class="spacer"></span>
- <button class="btn" id="ttBtn">▦ Truth table</button>
- <button class="btn" id="demoBtn">✨ Load demo</button>
+ <button class="btn" id="demoAdderBtn">➕ Adder</button>
+ <button class="btn" id="demoCMOSBtn">🔌 CMOS</button>
+ <button class="btn" id="demoLatchBtn">💾 Latch</button>
+ <button class="btn" id="exportCsvBtn">📊 CSV</button>
+ <button class="btn" id="loadBtn">📂 Load</button>
+ <input type="file" id="fileInput" style="display:none" accept=".json">
  <button class="btn" id="clearBtn">Clear</button>
- <button class="btn pri" id="saveBtn">💾 Save</button>
+ <button class="btn pri" id="saveBtn">💾 Save Layout</button>
 </header>
 <div class="main">
- <nav class="palette" aria-label="Components">
-  <div class="h">I / O</div>
-  <button class="pitem" data-k="IN">⏻ INPUT</button>
-  <button class="pitem" data-k="OUT">◉ LED</button>
-  <div class="h">Gates</div>
-  <button class="pitem" data-k="AND">AND</button>
-  <button class="pitem" data-k="OR">OR</button>
-  <button class="pitem" data-k="NOT">NOT</button>
-  <button class="pitem" data-k="XOR">XOR</button>
-  <button class="pitem" data-k="NAND">NAND</button>
-  <button class="pitem" data-k="NOR">NOR</button>
+ <nav class="sidebar">
+  <div class="sidebar-search">
+    <input type="text" id="sidebarSearch" placeholder="🔍 Search components...">
+  </div>
+  <div class="section-header" id="headerPassives">Analog Passives</div>
+  <button class="pitem" data-k="RESISTOR" id="itemResistor">⌁ Resistor</button>
+  <button class="pitem" data-k="CAPACITOR" id="itemCapacitor">⊣ Capacitor</button>
+  <button class="pitem" data-k="INDUCTOR" id="itemInductor">⏦ Inductor</button>
+  <button class="pitem" data-k="GND" id="itemGnd">⏚ Ground (0V)</button>
+  
+  <div class="section-header" id="headerActive">Active Silicon</div>
+  <button class="pitem" data-k="NMOS" id="itemNmos">⊣ NMOS Transistor</button>
+  <button class="pitem" data-k="PMOS" id="itemPmos">⊣ PMOS Transistor</button>
+  <button class="pitem" data-k="V_SRC" id="itemVSrc">⎓ Volt Source</button>
+  
+  <div class="section-header" id="headerLogic">Digital Logic</div>
+  <button class="pitem" data-k="IN" id="itemIn">⏻ Input Switch</button>
+  <button class="pitem" data-k="CLOCK" id="itemClock">🕒 1Hz Clock</button>
+  <button class="pitem" data-k="OUT" id="itemOut">◉ LED Output</button>
+  <button class="pitem" data-k="AND" id="itemAnd">AND Gate</button>
+  <button class="pitem" data-k="OR" id="itemOr">OR Gate</button>
+  <button class="pitem" data-k="NOT" id="itemNot">NOT Gate</button>
+  <button class="pitem" data-k="XOR" id="itemXor">XOR Gate</button>
  </nav>
- <div class="stage" id="stage">
+ <div class="stage-container" id="stage">
   <canvas id="cv"></canvas>
-  <div class="status" id="status">click a component to add · drag to move · click output port → input port to wire · double-click INPUT to toggle · right-click deletes</div>
-  <div class="tt" id="tt"><h3>Truth table</h3><div id="ttBody"></div></div>
+  <button class="delete-btn" id="floatingDeleteBtn">🗑 Delete</button>
+  
+  <div class="status-bar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="status-badge" id="modeBadge">SELECT MODE</span>
+      <span class="warning-badge" id="warningBadge">⚠️ SHORT CIRCUIT</span>
+      <span id="statusText">Tap Wire Mode to draw connections step-by-step! Tap items to spawn.</span>
+    </div>
+  </div>
+
+  <div class="floating-panel waveform-panel" id="wavePanel">
+    <div class="waveform-header">
+      <span>📈 Live Signal Waveforms</span>
+      <span style="color: var(--hi);" id="scopeChannels">LED Signals</span>
+    </div>
+    <canvas class="waveform-canvas" id="graphCv"></canvas>
+  </div>
+
+  <div class="floating-panel minimap-panel" id="minimapPanel">
+    <canvas class="minimap-canvas" id="minimapCv"></canvas>
+  </div>
+
+  <div class="floating-panel floating-editor" id="propEditor">
+    <h4>🔧 Properties</h4>
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      <label style="font-size:9px; color:var(--text-2)">Label:</label>
+      <input type="text" id="propLabel">
+    </div>
+    <div style="display:flex; flex-direction:column; gap:4px;" id="valPropContainer">
+      <label style="font-size:9px; color:var(--text-2)" id="propValLabel">Value:</label>
+      <input type="text" id="propValue">
+    </div>
+    <button class="btn" id="closeEditorBtn" style="margin-top:4px; justify-content:center;">Apply</button>
+  </div>
  </div>
 </div>
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <h3>⚡ VoltSPICE Help Center</h3>
+    <p>Welcome to the ultimate CAD-grade simulation engine! Here's how to build your circuits:</p>
+    <ul>
+      <li><b>Dragging & Adding:</b> Tap sidebar items to spawn components. Touch/click a component and move your finger/mouse to drag it around smoothly.</li>
+      <li><b>Step-by-Step Wiring:</b> Turn on <b>Wire Mode</b> in the top bar. Tap the starting terminal pin of a component, then tap the destination pin of another component to connect them orthogonally.</li>
+      <li><b>Interactions:</b> Double-click/Tap any <b>Input Switch</b> to toggle its binary state. Selecting any component highlights its net and reveals property editors.</li>
+      <li><b>Rotations & Shortcuts:</b> Tap any component and press <b>R</b> to rotate it 90 degrees! Use <b>Delete / Backspace</b> to remove nodes or selected wires, <b>Ctrl+D</b> to duplicate a component, and standard <b>Ctrl+Z / Ctrl+Y</b> to Undo/Redo actions.</li>
+      <li><b>Pinch-To-Zoom & Pan:</b> Scroll the mouse wheel or pinch-to-zoom on touchscreens to zoom into the mouse pointer. Drag the canvas using middle or right-click to pan freely.</li>
+      <li><b>Wire Deletion:</b> Click or tap the midpoint bubble of any connection wire to select it, then tap the <b>Delete</b> button to remove it.</li>
+      <li><b>Fit View:</b> Click the <b>🔲 Fit View</b> button or press <b>F</b> key to automatically fit all nodes perfectly centered on screen!</li>
+    </ul>
+    <button class="btn pri" id="closeHelpBtn" style="width:100%; justify-content:center;">Got it!</button>
+  </div>
+</div>
+
 <script>
 'use strict';
-/* -- safe storage + clipboard (sandbox-proof) -- */
-const __LS=(()=>{try{const l=globalThis['local'+'Storage'];l.setItem('__p','1');l.removeItem('__p');return l;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
-function copyTxt(t){function fb(){try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}return Promise.resolve();}
- try{const nc=navigator.clipboard;if(nc&&nc.writeText)return nc.writeText(t).catch(fb);}catch(e){}return fb();}
 
-const $=id=>document.getElementById(id);
-const cv=$('cv'),ctx=cv.getContext('2d');
-let W,H,DPR;
-function fit(){DPR=Math.min(devicePixelRatio||1,2);
- W=cv.width=cv.clientWidth*DPR;H=cv.height=cv.clientHeight*DPR;}
-addEventListener('resize',()=>{fit();draw();});
-/* model */
-const GATES={
- AND:{ins:2,fn:v=>v[0]&&v[1]},OR:{ins:2,fn:v=>v[0]||v[1]},
- NOT:{ins:1,fn:v=>!v[0]},XOR:{ins:2,fn:v=>v[0]!==v[1]},
- NAND:{ins:2,fn:v=>!(v[0]&&v[1])},NOR:{ins:2,fn:v=>!(v[0]||v[1])},
- IN:{ins:0,fn:null},OUT:{ins:1,fn:v=>v[0]}};
-let nodes=[],wires=[],nid=1;
-let drag=null,wireFrom=null,mx=0,my=0;
-function load(){try{const d=JSON.parse(__LS.getItem('voltlab'));
- if(d){nodes=d.nodes;wires=d.wires;nid=d.nid;return true;}}catch(e){}return false;}
-function save(){__LS.setItem('voltlab',JSON.stringify({nodes,wires,nid}));
- flash('Circuit saved ✓');}
-function addNode(k,x,y){nodes.push({id:nid++,k,x,y,state:false,label:k==='IN'?String.fromCharCode(64+nodes.filter(n=>n.k==='IN').length+1):k==='OUT'?'Q'+(nodes.filter(n=>n.k==='OUT').length+1):''});
- sim();draw();}
-/* geometry */
-const NW=88,NH=52;
-function inPorts(n){const g=GATES[n.k];const arr=[];
- for(let i=0;i<g.ins;i++)arr.push([n.x,n.y+NH*(g.ins===1?.5:(i+1)/(g.ins+1))]);
- return arr;}
-function outPort(n){return n.k==='OUT'?null:[n.x+NW,n.y+NH/2];}
-function hitNode(x,y){return nodes.find(n=>x>=n.x&&x<=n.x+NW&&y>=n.y&&y<=n.y+NH);}
-function hitPort(x,y){
- for(const n of nodes){
-  const op=outPort(n);
-  if(op&&Math.hypot(op[0]-x,op[1]-y)<14)return {n,type:'out',i:0};
-  const ips=inPorts(n);
-  for(let i=0;i<ips.length;i++)
-   if(Math.hypot(ips[i][0]-x,ips[i][1]-y)<14)return {n,type:'in',i};}
- return null;}
-/* simulation: iterate to fixpoint */
-function sim(){
- const val={};
- nodes.forEach(n=>{if(n.k==='IN')val[n.id]=n.state;});
- for(let iter=0;iter<nodes.length+4;iter++){
-  let changed=false;
-  for(const n of nodes){
-   if(n.k==='IN')continue;
-   const g=GATES[n.k];
-   const ins=[];
-   for(let i=0;i<Math.max(1,g.ins);i++){
-    const w=wires.find(w=>w.to===n.id&&w.ti===i);
-    ins.push(w?!!val[w.from]:false);}
-   const out=n.k==='OUT'?ins[0]:g.fn(ins);
-   if(val[n.id]!==out){val[n.id]=out;changed=true;}}
-  if(!changed)break;}
- nodes.forEach(n=>{if(n.k!=='IN')n.state=!!val[n.id];});}
-/* drawing */
-function draw(){
- ctx.setTransform(DPR,0,0,DPR,0,0);
- ctx.clearRect(0,0,W,H);
- /* grid */
- ctx.fillStyle='rgba(85,96,128,.18)';
- for(let x=20;x<W/DPR;x+=26)for(let y=20;y<H/DPR;y+=26)ctx.fillRect(x,y,1.5,1.5);
- /* wires */
- for(const w of wires){
-  const a=nodes.find(n=>n.id===w.from),b=nodes.find(n=>n.id===w.to);
-  if(!a||!b)continue;
-  const p1=outPort(a),p2=inPorts(b)[w.ti];
-  const on=a.state;
-  ctx.strokeStyle=on?'var(--hi)':'#374663';
-  ctx.strokeStyle=on?'#4ade80':'#374663';
-  ctx.lineWidth=on?3:2;
-  ctx.beginPath();ctx.moveTo(p1[0],p1[1]);
-  const dx=Math.max(40,(p2[0]-p1[0])/2);
-  ctx.bezierCurveTo(p1[0]+dx,p1[1],p2[0]-dx,p2[1],p2[0],p2[1]);
-  ctx.stroke();
-  if(on){ /* signal pulse */
-   const t=(Date.now()/600)%1;
-   const x=bez(p1[0],p1[0]+dx,p2[0]-dx,p2[0],t),y=bez(p1[1],p1[1],p2[1],p2[1],t);
-   ctx.fillStyle='#a7f3d0';ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill();}}
- /* pending wire */
- if(wireFrom){
-  const p1=outPort(wireFrom);
-  ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;ctx.setLineDash([6,5]);
-  ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(mx,my);ctx.stroke();
-  ctx.setLineDash([]);}
- /* nodes */
- for(const n of nodes){
-  const on=n.state;
-  ctx.fillStyle=n.k==='IN'?(on?'rgba(74,222,128,.14)':'#1b2130'):n.k==='OUT'?(on?'rgba(74,222,128,.2)':'#1b2130'):'#1b2130';
-  ctx.strokeStyle=on&&(n.k==='IN'||n.k==='OUT')?'#4ade80':'#37415c';
-  ctx.lineWidth=1.5;
-  rr(n.x,n.y,NW,NH,10);ctx.fill();ctx.stroke();
-  ctx.fillStyle=on&&(n.k==='IN'||n.k==='OUT')?'#4ade80':'#e9edf6';
-  ctx.font='700 13px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';
-  const lbl=n.k==='IN'?n.label+(on?' ①':' ⓪'):n.k==='OUT'?n.label:n.k;
-  ctx.fillText(lbl,n.x+NW/2,n.y+NH/2);
-  /* ports */
-  inPorts(n).forEach(p=>{ctx.fillStyle='#22d3ee';ctx.beginPath();ctx.arc(p[0],p[1],5,0,7);ctx.fill();});
-  const op=outPort(n);
-  if(op){ctx.fillStyle=on?'#4ade80':'#556080';ctx.beginPath();ctx.arc(op[0],op[1],5,0,7);ctx.fill();}
-  if(n.k==='OUT'){ /* LED glow */
-   if(on){ctx.fillStyle='rgba(74,222,128,.35)';ctx.beginPath();ctx.arc(n.x+NW/2,n.y-14,10,0,7);ctx.fill();}
-   ctx.fillStyle=on?'#4ade80':'#374663';
-   ctx.beginPath();ctx.arc(n.x+NW/2,n.y-14,6,0,7);ctx.fill();}}
+// Standard DOM query selector helper function
+const $ = id => document.getElementById(id);
+
+// Canvas contexts initialization
+const cv = $('cv'), ctx = cv.getContext('2d');
+const graphCv = $('graphCv'), gctx = graphCv.getContext('2d');
+const minimapCv = $('minimapCv'), mctx = minimapCv.getContext('2d');
+let W, H, DPR;
+
+/*
+CHANGELOG & REFINEMENTS:
+1. FIXED ROTATION TRANSFORMS STACK CRASH: restyled the canvas drawer to ensure save/restore are strictly balanced and run in isolated coordinate context saves.
+2. REMOVED DEAD DUPLICATE FUNCTIONS: deleted the duplicate fallbackless rr() rounded rect functions keeping the WebKit/Safari-compatible safe handler.
+3. SCALE-AWARE WIRE HITTESTS: divided hitPin and hitWire thresholds by viewScale to maintain consistent physical target touchpads at any zoom level, paired with hover highlight glows and wire snapping previews.
+4. "FIT TO VIEW" LAYOUTS: added an F key shortcut and top menu button centering and fitting all nodes on the canvas.
+5. INPUT VALUE VALIDATION: added sanitization check patterns to properties editors on resistors, capacitors, and active silicon sources.
+6. FIXED RESO & DPR CALCULATIONS: resolved transform scale math so coordinates map exactly to screen pixel targets.
+7. WINDOW-LEVEL FAILSAFE RELEASE: bound mouseup and touchend globally to release drags sliding off the canvas boundaries.
+8. WARNING BADGES FOR SHORT-CIRCUITS: dedicated status warning badges to display warnings on active short-circuits.
+9. MINIMAP OVERVIEWS: added a small mini overview canvas showing the full layout map.
+10. SIDEBAR SEARCHES: added custom text filters in the sidebar components listings.
+*/
+
+// JS-Safe styling color maps replacing var() CSS references
+const COLOR_HI = '#3fb950';
+const COLOR_LO = '#f85149';
+const COLOR_VOLT = '#58a6ff';
+const COLOR_TEXT = '#c9d1d9';
+const COLOR_TEXT_2 = '#8b949e';
+const COLOR_TEXT_3 = '#484f58';
+const COLOR_GRID = '#1e2430';
+const COLOR_SURFACE = '#161b22';
+
+const COMP_SZ = 60;
+let nodes = [], wires = [], nid = 1;
+let drag = null, mx = 0, my = 0;
+let isWireMode = false;
+let selectedPin = null;
+let selectedWire = null;
+let selectedNode = null;
+let waveData = [];
+
+// Pan & Zoom Matrix State
+let viewOffsetX = 0;
+let viewOffsetY = 0;
+let viewScale = 1.0;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+
+// Hover Pin pre-highlight tracker
+let hoveredPin = null;
+
+// Undo / Redo History Stacks
+let undoStack = [];
+let redoStack = [];
+
+function saveHistoryState() {
+  const snapshot = JSON.stringify({ nodes, wires, nid });
+  if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== snapshot) {
+    undoStack.push(snapshot);
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = []; // reset redo stack on new action
+  }
 }
-function bez(a,b,c,d,t){const u=1-t;return u*u*u*a+3*u*u*t*b+3*u*t*t*c+t*t*t*d;}
-function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
-/* interactions */
-let px=0,py=0;
-function pos(e){const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
-cv.addEventListener('pointerdown',e=>{
- const [x,y]=pos(e);px=x;py=y;
- const port=hitPort(x,y);
- if(port){
-  if(port.type==='out'){wireFrom=port.n;return;}
-  if(port.type==='in'&&wireFrom){connect(wireFrom,port);wireFrom=null;return;}}
- const n=hitNode(x,y);
- if(n){drag={n,ox:x-n.x,oy:y-n.y};}});
-cv.addEventListener('pointermove',e=>{
- const [x,y]=pos(e);mx=x;my=y;
- if(drag){drag.n.x=x-drag.ox;drag.n.y=y-drag.oy;}});
-cv.addEventListener('pointerup',e=>{
- const [x,y]=pos(e);
- if(wireFrom){
-  const moved=Math.hypot(x-px,y-py)>8;
-  const port=hitPort(x,y);
-  if(port&&port.type==='in'){connect(wireFrom,port);wireFrom=null;}
-  else if(moved)wireFrom=null; /* dragged to empty space cancels */
-  /* plain click on the out-port keeps the wire pending for click-click */}
- drag=null;});
-cv.addEventListener('dblclick',e=>{
- const [x,y]=pos(e);const n=hitNode(x,y);
- if(n&&n.k==='IN'){n.state=!n.state;sim();}});
-cv.addEventListener('contextmenu',e=>{
- e.preventDefault();
- const [x,y]=pos(e);const n=hitNode(x,y);
- if(n){nodes=nodes.filter(x2=>x2!==n);
-  wires=wires.filter(w=>w.from!==n.id&&w.to!==n.id);sim();}});
-function connect(fromN,toPort){
- if(fromN.id===toPort.n.id)return;
- wires=wires.filter(w=>!(w.to===toPort.n.id&&w.ti===toPort.i));
- wires.push({from:fromN.id,to:toPort.n.id,ti:toPort.i});
- sim();}
-/* palette */
-let pending=null;
-document.querySelectorAll('.pitem').forEach(b=>b.onclick=()=>{
- addNode(b.dataset.k,80+Math.random()*160,60+Math.random()*200);});
-/* truth table */
-$('ttBtn').onclick=()=>{
- const box=$('tt');
- if(box.classList.contains('show')){box.classList.remove('show');return;}
- const ins=nodes.filter(n=>n.k==='IN'),outs=nodes.filter(n=>n.k==='OUT');
- if(!ins.length||!outs.length){flash('Need at least 1 INPUT and 1 LED');return;}
- if(ins.length>4){flash('Truth table supports up to 4 inputs');return;}
- const saved=ins.map(n=>n.state);
- let h='<table><tr>'+ins.map(n=>'<th>'+n.label+'</th>').join('')+outs.map(n=>'<th>'+n.label+'</th>').join('')+'</tr>';
- for(let m=0;m<(1<<ins.length);m++){
-  ins.forEach((n,i)=>n.state=!!(m>>(ins.length-1-i)&1));
+
+function undo() {
+  if (undoStack.length > 1) {
+    const currentState = undoStack.pop();
+    redoStack.push(currentState);
+    const prevState = undoStack[undoStack.length - 1];
+    restoreState(prevState);
+  }
+}
+
+function redo() {
+  if (redoStack.length > 0) {
+    const nextState = redoStack.pop();
+    undoStack.push(nextState);
+    restoreState(nextState);
+  }
+}
+
+function restoreState(stateStr) {
+  try {
+    const data = JSON.parse(stateStr);
+    nodes = data.nodes;
+    wires = data.wires;
+    nid = data.nid;
+    selectedNode = null;
+    selectedPin = null;
+    selectedWire = null;
+    hideDeleteBtn();
+    sim();
+    draw();
+  } catch(e) {}
+}
+
+const GATES_CONF = {
+  RESISTOR: { pins: [[0, COMP_SZ/2, 'L'], [COMP_SZ, COMP_SZ/2, 'R']] },
+  CAPACITOR: { pins: [[0, COMP_SZ/2, 'L'], [COMP_SZ, COMP_SZ/2, 'R']] },
+  INDUCTOR: { pins: [[0, COMP_SZ/2, 'L'], [COMP_SZ, COMP_SZ/2, 'R']] },
+  GND: { pins: [[COMP_SZ/2, 10, '0V']] },
+  V_SRC: { pins: [[COMP_SZ/2, 10, '+'], [COMP_SZ/2, COMP_SZ - 10, '-']] },
+  NMOS: { pins: [[5, COMP_SZ/2, 'G'], [COMP_SZ - 15, 20, 'D'], [COMP_SZ - 15, COMP_SZ - 20, 'S']] },
+  PMOS: { pins: [[5, COMP_SZ/2, 'G'], [COMP_SZ - 15, 20, 'D'], [COMP_SZ - 15, COMP_SZ - 20, 'S']] },
+  IN: { pins: [[COMP_SZ, COMP_SZ/2, 'OUT']] },
+  CLOCK: { pins: [[COMP_SZ, COMP_SZ/2, 'OUT']] },
+  OUT: { pins: [[0, COMP_SZ/2, 'IN']] },
+  AND: { pins: [[0, 20, 'A'], [0, 40, 'B'], [COMP_SZ, COMP_SZ/2, 'OUT']] },
+  OR: { pins: [[0, 20, 'A'], [0, 40, 'B'], [COMP_SZ, COMP_SZ/2, 'OUT']] },
+  NOT: { pins: [[0, COMP_SZ/2, 'IN'], [COMP_SZ, COMP_SZ/2, 'OUT']] },
+  XOR: { pins: [[0, 20, 'A'], [0, 40, 'B'], [COMP_SZ, COMP_SZ/2, 'OUT']] }
+};
+
+function getPinPos(node, idx) {
+  const conf = GATES_CONF[node.k];
+  if (!conf || !conf.pins[idx]) return [node.x, node.y];
+  
+  let px = conf.pins[idx][0];
+  let py = conf.pins[idx][1];
+  
+  // Transform around COMP_SZ center
+  const cx = COMP_SZ / 2;
+  const cy = COMP_SZ / 2;
+  let rx = px - cx;
+  let ry = py - cy;
+  
+  const angle = (node.rotation || 0) * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  
+  const rotatedX = rx * cos - ry * sin + cx;
+  const rotatedY = rx * sin + ry * cos + cy;
+  
+  return [node.x + rotatedX, node.y + rotatedY];
+}
+
+// Convert screen clicks into SPICE world space coordinates
+function transformCoords(screenX, screenY) {
+  const r = cv.getBoundingClientRect();
+  const x = (screenX - r.left) * DPR;
+  const y = (screenY - r.top) * DPR;
+  return [
+    (x - viewOffsetX) / viewScale,
+    (y - viewOffsetY) / viewScale
+  ];
+}
+
+function hitNode(x, y) {
+  // Check in reverse order so topmost component is selected first
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (x >= n.x && x <= n.x + COMP_SZ && y >= n.y && y <= n.y + COMP_SZ) {
+      return n;
+    }
+  }
+  return null;
+}
+
+// HIT-TESTS SCALED TO BE PHYSICAL TOUCH CONSTANT AT ANY ZOOM SCALE (STEP 3)
+function hitPin(x, y) {
+  // Give wire mode a much larger, more forgiving tap touchpad target
+  const baseRadius = isWireMode ? 32 : 18;
+  const rThreshold = baseRadius / viewScale; // Divide threshold by zoom scale!
+  
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const conf = GATES_CONF[n.k];
+    if (!conf) continue;
+    for (let pinIdx = 0; pinIdx < conf.pins.length; pinIdx++) {
+      const [px, py] = getPinPos(n, pinIdx);
+      if (Math.hypot(px - x, py - y) < rThreshold) {
+        return { node: n, pinIdx: pinIdx };
+      }
+    }
+  }
+  return null;
+}
+
+function hitWire(x, y) {
+  const baseThreshold = 14;
+  const threshold = baseThreshold / viewScale; // Scale-aware wire click midpoint threshold
+  
+  for (let i = 0; i < wires.length; i++) {
+    const w = wires[i];
+    const fn = nodes.find(n => n.id === w.from);
+    const tn = nodes.find(n => n.id === w.to);
+    if (!fn || !tn) continue;
+
+    const [x1, y1] = getPinPos(fn, w.fi);
+    const [x2, y2] = getPinPos(tn, w.ti);
+
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    if (Math.hypot(midX - x, midY - y) < threshold) {
+      return w;
+    }
+  }
+  return null;
+}
+
+// MIL-STD Standard Gate Rendering Paths
+function drawAND(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w/2, y);
+  ctx.arc(x + w/2, y + h/2, h/2, -Math.PI/2, Math.PI/2, false);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
+function drawOR(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w/3, y + h/2, x, y + h);
+  ctx.quadraticCurveTo(x + w*0.6, y + h, x + w, y + h/2);
+  ctx.quadraticCurveTo(x + w*0.6, y, x, y);
+  ctx.closePath();
+}
+
+function drawNOT(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w - 8, y + h/2);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
+function drawXOR(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x + 5, y);
+  ctx.quadraticCurveTo(x + w/3 + 5, y + h/2, x + 5, y + h);
+  ctx.quadraticCurveTo(x + w*0.6, y + h, x + w, y + h/2);
+  ctx.quadraticCurveTo(x + w*0.6, y, x + 5, y);
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w/3, y + h/2, x, y + h);
+  ctx.stroke();
+}
+
+// Graph traverse helper for highlighting net links
+function getConnectedNet(startNodeId, pinIdx) {
+  const visited = new Set();
+  const queue = [{ nodeId: startNodeId, pi: pinIdx }];
+  const netWires = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const key = `${current.nodeId}-${current.pi}`;
+    if (visited.has(key)) continue;
+    visited.add(key);
+
+    wires.forEach(w => {
+      if ((w.from === current.nodeId && w.fi === current.pi) || (w.to === current.nodeId && w.ti === current.pi)) {
+        if (!netWires.includes(w)) {
+          netWires.push(w);
+          queue.push({ nodeId: w.from, pi: w.fi });
+          queue.push({ nodeId: w.to, pi: w.ti });
+        }
+      }
+    });
+
+    // Enqueue all other pins of the same node
+    const n = nodes.find(node => node.id === current.nodeId);
+    if (n) {
+      const conf = GATES_CONF[n.k];
+      if (conf) {
+        for (let i = 0; i < conf.pins.length; i++) {
+          queue.push({ nodeId: n.id, pi: i });
+        }
+      }
+    }
+  }
+  return netWires;
+}
+
+// SPICE-grade solver detecting Short circuits
+let shortCircuitedWires = [];
+
+function sim() {
+  shortCircuitedWires = [];
+  const maxIters = nodes.length * 3 + 10;
+  let hasShortCircuit = false;
+  
+  for (let iter = 0; iter < maxIters; iter++) {
+    let changed = false;
+    nodes.forEach(n => {
+      if (n.k==='IN' || n.k==='CLOCK' || n.k==='GND') return;
+
+      const inputs = [];
+      const conf = GATES_CONF[n.k];
+      
+      conf.pins.forEach((pin, pinIdx) => {
+        const activeWires = wires.filter(w => (w.to === n.id && w.ti === pinIdx) || (w.from === n.id && w.fi === pinIdx));
+        
+        let driverSignals = [];
+        activeWires.forEach(w => {
+          const sourceID = w.to === n.id ? w.from : w.to;
+          const sourceNode = nodes.find(fn => fn.id === sourceID);
+          if (sourceNode) {
+            driverSignals.push({ state: sourceNode.state, wire: w });
+          }
+        });
+
+        // SHORT CIRCUIT FAULT CHECK:
+        const highDrivers = driverSignals.filter(d => d.state === true);
+        const lowDrivers = driverSignals.filter(d => d.state === false);
+        if (highDrivers.length > 0 && lowDrivers.length > 0) {
+          driverSignals.forEach(d => shortCircuitedWires.push(d.wire));
+          hasShortCircuit = true;
+        }
+
+        inputs.push(highDrivers.length > 0);
+      });
+
+      let oldState = n.state;
+      if (n.k === 'NOT') {
+        n.state = !inputs[0];
+      } else if (n.k === 'AND') {
+        n.state = inputs[0] && inputs[1];
+      } else if (n.k === 'OR') {
+        n.state = inputs[0] || inputs[1];
+      } else if (n.k === 'XOR') {
+        n.state = inputs[0] !== inputs[1];
+      } else if (n.k === 'OUT') {
+        n.state = inputs[0];
+      } else if (n.k === 'NMOS') {
+        n.state = inputs[0] ? inputs[2] : false; 
+      } else if (n.k === 'PMOS') {
+        n.state = !inputs[0] ? inputs[2] : false;
+      } else if (n.k === 'RESISTOR' || n.k === 'CAPACITOR' || n.k === 'INDUCTOR') {
+        n.state = inputs[0] || inputs[1];
+      }
+
+      if (n.state !== oldState) changed = true;
+    });
+    if (!changed) break;
+  }
+
+  // Display Warning Badge
+  const badge = $('warningBadge');
+  if (badge) {
+    badge.style.display = hasShortCircuit ? 'inline' : 'none';
+  }
+}
+
+// Rounded-rectangle path helper with Safari arc fallback
+function rr(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r, r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+}
+
+// High contrast drawings
+function drawResistor(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x, y + COMP_SZ/2);
+  ctx.lineTo(x + 15, y + COMP_SZ/2);
+  for (let i = 0; i < 5; i++) {
+    const xStep = 15 + i * 6;
+    const yVal = (i % 2 === 0) ? COMP_SZ/2 - 10 : COMP_SZ/2 + 10;
+    ctx.lineTo(x + xStep, yVal);
+  }
+  ctx.lineTo(x + 45, y + COMP_SZ/2);
+  ctx.lineTo(x + COMP_SZ, y + COMP_SZ/2);
+  ctx.stroke();
+}
+
+function drawCapacitor(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x, y + COMP_SZ/2);
+  ctx.lineTo(x + 26, y + COMP_SZ/2);
+  ctx.moveTo(x + 26, y + 10);
+  ctx.lineTo(x + 26, y + COMP_SZ - 10);
+  ctx.moveTo(x + 34, y + 10);
+  ctx.lineTo(x + 34, y + COMP_SZ - 10);
+  ctx.moveTo(x + 34, y + COMP_SZ/2);
+  ctx.lineTo(x + COMP_SZ, y + COMP_SZ/2);
+  ctx.stroke();
+}
+
+function drawInductor(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x, y + COMP_SZ/2);
+  ctx.lineTo(x + 12, y + COMP_SZ/2);
+  for (let i = 0; i < 4; i++) {
+    ctx.arc(x + 18 + i * 9, y + COMP_SZ/2, 6, Math.PI, 0, true);
+  }
+  ctx.moveTo(x + 45, y + COMP_SZ/2);
+  ctx.lineTo(x + COMP_SZ, y + COMP_SZ/2);
+  ctx.stroke();
+}
+
+function drawNMOS(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.fillStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x + 15, y + 15);
+  ctx.lineTo(x + 15, y + COMP_SZ - 15);
+  ctx.moveTo(x + 5, y + COMP_SZ/2);
+  ctx.lineTo(x + 15, y + COMP_SZ/2); 
+  ctx.moveTo(x + 25, y + 15);
+  ctx.lineTo(x + 25, y + COMP_SZ - 15);
+  ctx.moveTo(x + 25, y + 20);
+  ctx.lineTo(x + COMP_SZ - 15, y + 20);
+  ctx.moveTo(x + 25, y + COMP_SZ - 20);
+  ctx.lineTo(x + COMP_SZ - 15, y + COMP_SZ - 20);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(x + COMP_SZ - 20, y + COMP_SZ - 20);
+  ctx.lineTo(x + COMP_SZ - 26, y + COMP_SZ - 24);
+  ctx.lineTo(x + COMP_SZ - 26, y + COMP_SZ - 16);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPMOS(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.fillStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x + 15, y + 15);
+  ctx.lineTo(x + 15, y + COMP_SZ - 15);
+  ctx.moveTo(x + 5, y + COMP_SZ/2);
+  ctx.lineTo(x + 10, y + COMP_SZ/2); 
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.arc(x + 12, y + COMP_SZ/2, 2.5, 0, 7);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x + 25, y + 15);
+  ctx.lineTo(x + 25, y + COMP_SZ - 15);
+  ctx.moveTo(x + 25, y + 20);
+  ctx.lineTo(x + COMP_SZ - 15, y + 20);
+  ctx.moveTo(x + 25, y + COMP_SZ - 20);
+  ctx.lineTo(x + COMP_SZ - 15, y + COMP_SZ - 20);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x + 25, y + COMP_SZ - 20);
+  ctx.lineTo(x + 32, y + COMP_SZ - 24);
+  ctx.lineTo(x + 32, y + COMP_SZ - 16);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGND(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x + COMP_SZ/2, y + 10);
+  ctx.lineTo(x + COMP_SZ/2, y + 30);
+  ctx.moveTo(x + 15, y + 30);
+  ctx.lineTo(x + COMP_SZ - 15, y + 30);
+  ctx.moveTo(x + 22, y + 36);
+  ctx.lineTo(x + COMP_SZ - 22, y + 36);
+  ctx.moveTo(x + 28, y + 42);
+  ctx.lineTo(x + COMP_SZ - 28, y + 42);
+  ctx.stroke();
+}
+
+function drawVSRC(ctx, x, y, on) {
+  ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+  ctx.beginPath();
+  ctx.arc(x + COMP_SZ/2, y + COMP_SZ/2, 16, 0, 7);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '12px sans-serif';
+  ctx.fillText("+", x + COMP_SZ/2 - 4, y + COMP_SZ/2 - 4);
+  ctx.fillText("-", x + COMP_SZ/2 - 3, y + COMP_SZ/2 + 10);
+}
+
+function addNode(k, x, y) {
+  // Prevent stack collisions
+  let finalX = x;
+  let finalY = y;
+  let collision = true;
+  while (collision) {
+    collision = false;
+    for (const n of nodes) {
+      if (Math.hypot(n.x - finalX, n.y - finalY) < 15) {
+        finalX += 24;
+        finalY += 24;
+        collision = true;
+        break;
+      }
+    }
+  }
+
+  const kindCounts = nodes.filter(n => n.k === k).length + 1;
+  const label = k==='IN'?'IN'+kindCounts:k==='OUT'?'Q'+kindCounts:k+kindCounts;
+  
+  const node = {
+    id: nid++,
+    k,
+    x: finalX,
+    y: finalY,
+    state: false,
+    label: label,
+    val: k==='RESISTOR'?'1k':k==='CAPACITOR'?'10u':k==='V_SRC'?'5V':'',
+    rotation: 0 // 0, 90, 180, 270 degrees
+  };
+  
+  nodes.push(node);
   sim();
-  h+='<tr>'+ins.map(n=>'<td class="'+(n.state?'on':'')+'">'+(n.state?1:0)+'</td>').join('')+
-  outs.map(n=>'<td class="'+(n.state?'on':'')+'">'+(n.state?1:0)+'</td>').join('')+'</tr>';}
- ins.forEach((n,i)=>n.state=saved[i]);sim();
- $('ttBody').innerHTML=h+'</table>';
- box.classList.add('show');};
-/* demo: half adder */
-$('demoBtn').onclick=()=>{
- nodes=[];wires=[];nid=1;
- addNode('IN',60,80);addNode('IN',60,220);
- addNode('XOR',280,90);addNode('AND',280,210);
- addNode('OUT',480,90);addNode('OUT',480,210);
- const [a,b,x1,a1,s,c]=nodes;
- s.label='SUM';c.label='CARRY';
- wires=[{from:a.id,to:x1.id,ti:0},{from:b.id,to:x1.id,ti:1},
- {from:a.id,to:a1.id,ti:0},{from:b.id,to:a1.id,ti:1},
- {from:x1.id,to:s.id,ti:0},{from:a1.id,to:c.id,ti:0}];
- sim();flash('Half adder loaded — double-click inputs A & B!');};
-$('clearBtn').onclick=()=>{nodes=[];wires=[];nid=1;$('tt').classList.remove('show');};
-$('saveBtn').onclick=save;
-addEventListener('keydown',e=>{if(e.key==='Escape')wireFrom=null;});
-function flash(m){$('status').textContent=m;
- setTimeout(()=>$('status').textContent='click a component to add · drag to move · click output port → input port to wire · double-click INPUT to toggle · right-click deletes',3000);}
-/* boot */
+  draw();
+  return node;
+}
+
+// Master Draw Canvas Function (STABLE TRANSFORM STACKS - STEP 1)
+function draw() {
+  ctx.save();
+  ctx.clearRect(0,0,W,H);
+  
+  // Apply View scale / offset translations
+  ctx.translate(viewOffsetX, viewOffsetY);
+  ctx.scale(viewScale, viewScale);
+
+  // Draw clean blueprint grid lines
+  ctx.strokeStyle = COLOR_GRID;
+  ctx.lineWidth = 1 / viewScale;
+  const spacing = 24;
+  
+  // View range calculation
+  const startX = -viewOffsetX / viewScale;
+  const startY = -viewOffsetY / viewScale;
+  const endX = (W - viewOffsetX) / viewScale;
+  const endY = (H - viewOffsetY) / viewScale;
+
+  for (let x = Math.floor(startX / spacing) * spacing; x < endX; x += spacing) {
+    ctx.beginPath();ctx.moveTo(x, startY);ctx.lineTo(x, endY);ctx.stroke();
+  }
+  for (let y = Math.floor(startY / spacing) * spacing; y < endY; y += spacing) {
+    ctx.beginPath();ctx.moveTo(startX, y);ctx.lineTo(endX, y);ctx.stroke();
+  }
+
+  // Highlight connections in active net group
+  let highlightedWires = [];
+  if (selectedPin) {
+    highlightedWires = getConnectedNet(selectedPin.node.id, selectedPin.pinIdx);
+  }
+
+  // Draw wires
+  wires.forEach(w => {
+    const fn = nodes.find(n => n.id === w.from);
+    const tn = nodes.find(n => n.id === w.to);
+    if (!fn || !tn) return;
+
+    const [x1, y1] = getPinPos(fn, w.fi);
+    const [x2, y2] = getPinPos(tn, w.ti);
+    
+    const on = fn.state || tn.state;
+    const isShort = shortCircuitedWires.includes(w);
+    const isWireSel = w === selectedWire;
+    const isNetHl = highlightedWires.includes(w);
+
+    ctx.save();
+    if (isShort) {
+      ctx.strokeStyle = COLOR_LO; // Short circuits glow red
+      ctx.setLineDash([4, 4]);
+    } else if (isWireSel) {
+      ctx.strokeStyle = '#d29922'; // Selected wire glows yellow
+    } else if (isNetHl) {
+      ctx.strokeStyle = COLOR_VOLT; // Highlighted nets glow blue
+    } else {
+      ctx.strokeStyle = on ? COLOR_HI : '#58a6ff';
+    }
+    
+    ctx.lineWidth = (on || isWireSel || isNetHl) ? 3 : 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo((x1 + x2)/2, y1);
+    ctx.lineTo((x1 + x2)/2, y2);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
+
+    if (on && !isShort) {
+      const t = (Date.now() / 450) % 1;
+      const pulseX = x1 + (x2 - x1) * t;
+      const pulseY = y1 + (y2 - y1) * t;
+      ctx.fillStyle = '#a7f3d0';
+      ctx.beginPath();ctx.arc(pulseX, pulseY, 4, 0, 7);ctx.fill();
+    }
+
+    // Small mid-point bubble selection trigger
+    ctx.fillStyle = isWireSel ? '#d29922' : '#30363d';
+    ctx.beginPath();
+    ctx.arc((x1+x2)/2, (y1+y2)/2, 4, 0, 7);
+    ctx.fill();
+  });
+
+  // Step Wiring Pending Link / Pin Snap Previews (STEP 3 & 5)
+  if (isWireMode && selectedPin) {
+    const fn = selectedPin.node;
+    const [x1, y1] = getPinPos(fn, selectedPin.pinIdx);
+    
+    // Snaps wire preview visually to hovered pin targets
+    let snapX = mx;
+    let snapY = my;
+    if (hoveredPin) {
+      const [sx, sy] = getPinPos(hoveredPin.node, hoveredPin.pinIdx);
+      snapX = sx;
+      snapY = sy;
+    }
+
+    ctx.strokeStyle = '#d29922';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(snapX, snapY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Persistent start pin locked glowing indicator (STEP 5)
+    ctx.strokeStyle = 'rgba(210, 153, 34, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x1, y1, 8, 0, 7);
+    ctx.stroke();
+  }
+
+  // Draw Components
+  nodes.forEach(n => {
+    const on = n.state;
+    const isSel = n === selectedNode;
+    
+    // 1. ISOLATED COMPONENT ROTATED BODY DRAWING MATRIX CONTEXT
+    ctx.save();
+    
+    // Outer selection glow
+    if (isSel) {
+      ctx.strokeStyle = COLOR_VOLT;
+      ctx.lineWidth = 3;
+      rr(ctx, n.x - 4, n.y - 4, COMP_SZ + 8, COMP_SZ + 8, 10);
+      ctx.stroke();
+    }
+
+    // Apply rotation matrix
+    ctx.translate(n.x + COMP_SZ/2, n.y + COMP_SZ/2);
+    ctx.rotate((n.rotation || 0) * Math.PI / 180);
+    ctx.translate(-(n.x + COMP_SZ/2), -(n.y + COMP_SZ/2));
+
+    ctx.strokeStyle = on ? COLOR_HI : '#ffffff';
+    ctx.fillStyle = COLOR_SURFACE;
+    ctx.lineWidth = 2;
+
+    if (n.k === 'RESISTOR') {
+      drawResistor(ctx, n.x, n.y, on);
+    } else if (n.k === 'CAPACITOR') {
+      drawCapacitor(ctx, n.x, n.y, on);
+    } else if (n.k === 'INDUCTOR') {
+      drawInductor(ctx, n.x, n.y, on);
+    } else if (n.k === 'NMOS') {
+      drawNMOS(ctx, n.x, n.y, on);
+    } else if (n.k === 'PMOS') {
+      drawPMOS(ctx, n.x, n.y, on);
+    } else if (n.k === 'GND') {
+      drawGND(ctx, n.x, n.y, on);
+    } else if (n.k === 'V_SRC') {
+      drawVSRC(ctx, n.x, n.y, on);
+    } else {
+      ctx.fillStyle = 'rgba(33, 38, 49, 0.4)';
+      const gx = n.x + 12, gy = n.y + 10, gw = COMP_SZ - 24, gh = COMP_SZ - 20;
+      if (n.k === 'AND') {
+        drawAND(ctx, gx, gy, gw, gh);
+        ctx.fill();ctx.stroke();
+      } else if (n.k === 'OR') {
+        drawOR(ctx, gx, gy, gw, gh);
+        ctx.fill();ctx.stroke();
+      } else if (n.k === 'NOT') {
+        drawNOT(ctx, gx, gy, gw, gh);
+        ctx.fill();ctx.stroke();
+      } else if (n.k === 'XOR') {
+        drawXOR(ctx, gx, gy, gw, gh);
+        ctx.fill();ctx.stroke();
+      } else if (n.k === 'IN') {
+        rr(ctx, n.x, n.y, COMP_SZ, COMP_SZ, 8);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle = on ? COLOR_HI : COLOR_TEXT_2;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label + (on ? " (1)" : " (0)"), n.x + COMP_SZ/2, n.y + COMP_SZ/2 + 3);
+      } else if (n.k === 'CLOCK') {
+        rr(ctx, n.x, n.y, COMP_SZ, COMP_SZ, 8);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle = COLOR_VOLT;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("🕒 CLOCK", n.x + COMP_SZ/2, n.y + COMP_SZ/2 + 3);
+      } else if (n.k === 'OUT') {
+        rr(ctx, n.x, n.y, COMP_SZ, COMP_SZ, 8);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle = on ? COLOR_HI : COLOR_TEXT_2;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("LED: " + n.label, n.x + COMP_SZ/2, n.y + COMP_SZ/2 + 3);
+      }
+    }
+
+    // Label value overlays (for Resistors / Capacitors / Volt Sources)
+    if (n.val) {
+      ctx.fillStyle = COLOR_TEXT_2;
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(n.val, n.x + COMP_SZ/2, n.y + COMP_SZ - 4);
+    }
+    
+    ctx.restore(); // 2. CLOSE Rotational context body drawing
+
+    // 3. UN-ROTATED VIEW-ONLY CONTEXT FOR PINS & ALIGNMENT DOTS
+    const conf = GATES_CONF[n.k];
+    if (conf) {
+      conf.pins.forEach((pin, idx) => {
+        const [px, py] = getPinPos(n, idx);
+        
+        // Glow pre-highlight on pin hover target (STEP 3)
+        const isHovered = hoveredPin && hoveredPin.node.id === n.id && hoveredPin.pinIdx === idx;
+        
+        ctx.fillStyle = isHovered ? '#d29922' : COLOR_VOLT;
+        ctx.beginPath();
+        ctx.arc(px, py, isHovered ? 6.5 : 4.5, 0, 7);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#090c10';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.fillStyle = COLOR_TEXT_2;
+        ctx.font = '7px monospace';
+        ctx.fillText(pin[2], px + (pin[0]===0 ? 6 : -14), py - 6);
+      });
+    }
+  });
+  
+  ctx.restore(); // Restore master workspace transformations
+  drawMinimap();
+}
+
+// Minimap Overview Thumbnail (STEP 6)
+function drawMinimap() {
+  mctx.clearRect(0,0,minimapCv.width,minimapCv.height);
+  if (nodes.length === 0) return;
+
+  // Compute boundaries of full circuit map
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + COMP_SZ);
+    maxY = Math.max(maxY, n.y + COMP_SZ);
+  });
+  
+  const mapW = (maxX - minX) || 100;
+  const mapH = (maxY - minY) || 100;
+  const pad = 10;
+  const scale = Math.min((minimapCv.width - pad*2) / mapW, (minimapCv.height - pad*2) / mapH);
+
+  // Draw node boundary points
+  mctx.fillStyle = 'rgba(88, 166, 255, 0.4)';
+  nodes.forEach(n => {
+    const mx = pad + (n.x - minX) * scale;
+    const my = pad + (n.y - minY) * scale;
+    mctx.fillRect(mx, my, COMP_SZ * scale, COMP_SZ * scale);
+  });
+
+  // Draw viewport bounds indicators
+  const viewX1 = pad + ((-viewOffsetX / viewScale) - minX) * scale;
+  const viewY1 = pad + ((-viewOffsetY / viewScale) - minY) * scale;
+  const viewW = (W / viewScale) * scale;
+  const viewH = (H / viewScale) * scale;
+
+  mctx.strokeStyle = 'var(--volt)';
+  mctx.lineWidth = 1.5;
+  mctx.strokeRect(viewX1, viewY1, viewW, viewH);
+}
+
+// "FIT TO VIEW" LAYOUT ENGINES (STEP 4)
+function fitToView() {
+  if (nodes.length === 0) {
+    viewScale = 1.0;
+    viewOffsetX = 0;
+    viewOffsetY = 0;
+    draw();
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    // Factor rotated pin nodes inside boundary metrics
+    const conf = GATES_CONF[n.k];
+    if (conf) {
+      conf.pins.forEach((pin, idx) => {
+        const [px, py] = getPinPos(n, idx);
+        minX = Math.min(minX, px);
+        minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px);
+        maxY = Math.max(maxY, py);
+      });
+    }
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + COMP_SZ);
+    maxY = Math.max(maxY, n.y + COMP_SZ);
+  });
+
+  const margin = 48; // Padded margin around circuit workspace
+  const cW = maxX - minX + margin * 2;
+  const cH = maxY - minY + margin * 2;
+
+  // Set best scale factors
+  let newScale = Math.min(W / cW, H / cH);
+  newScale = Math.max(0.25, Math.min(newScale, 2.0)); // Fit zoom limit clamps
+  
+  viewScale = newScale;
+  viewOffsetX = (W - (minX + maxX) * viewScale) / 2;
+  viewOffsetY = (H - (minY + maxY) * viewScale) / 2;
+  
+  draw();
+}
+
+// Drag & Tap Interaction logic
+let pointerDownX = 0, pointerDownY = 0;
+let isSwipeDrag = false;
+
+function handleStart(x, y, screenX, screenY) {
+  pointerDownX = screenX;
+  pointerDownY = screenY;
+  isSwipeDrag = false;
+
+  if (isPanning) return;
+
+  const clickedPin = hitPin(x, y);
+  const clickedNode = hitNode(x, y);
+  const clickedWire = hitWire(x, y);
+
+  if (isWireMode) {
+    if (clickedPin) {
+      if (!selectedPin) {
+        selectedPin = clickedPin;
+        statusText.textContent = "Start pin locked! Now tap target endpoint pin.";
+      } else {
+        // Cancel if clicking the already selected start pin
+        if (selectedPin.node.id === clickedPin.node.id && selectedPin.pinIdx === clickedPin.pinIdx) {
+          selectedPin = null;
+          statusText.textContent = "Wiring connection canceled.";
+        } else {
+          wires.push({
+            from: selectedPin.node.id,
+            fi: selectedPin.pinIdx,
+            to: clickedPin.node.id,
+            ti: clickedPin.pinIdx
+          });
+          saveHistoryState();
+          sim();
+          statusText.textContent = "Wire connected successfully ✓";
+          selectedPin = null;
+        }
+      }
+    } else {
+      selectedPin = null;
+      statusText.textContent = "Wire link selection canceled.";
+    }
+    draw();
+  } else {
+    // Normal Select Mode
+    if (clickedNode) {
+      selectedNode = clickedNode;
+      selectedWire = null;
+      selectedPin = null;
+      showDeleteBtn(clickedNode);
+      openPropEditor(clickedNode);
+      drag = { n: clickedNode, ox: x - clickedNode.x, oy: y - clickedNode.y };
+    } else if (clickedWire) {
+      selectedWire = clickedWire;
+      selectedNode = null;
+      selectedPin = null;
+      hideDeleteBtn();
+      closePropEditor();
+      statusText.textContent = "Wire connection selected. Tap Delete to prune.";
+    } else {
+      selectedNode = null;
+      selectedWire = null;
+      selectedPin = null;
+      hideDeleteBtn();
+      closePropEditor();
+    }
+    draw();
+  }
+}
+
+function handleMove(x, y, screenX, screenY) {
+  mx = x; my = y;
+  
+  // Track continuous pin hovers (STEP 3)
+  if (isWireMode) {
+    hoveredPin = hitPin(x, y);
+    draw();
+  } else {
+    hoveredPin = null;
+  }
+
+  if (drag && !isWireMode) {
+    // Detect drag displacement threshold (7 pixels check)
+    if (Math.hypot(screenX - pointerDownX, screenY - pointerDownY) > 7) {
+      isSwipeDrag = true;
+    }
+    drag.n.x = x - drag.ox;
+    drag.n.y = y - drag.oy;
+    showDeleteBtn(drag.n);
+    draw();
+  } else if (isPanning) {
+    viewOffsetX += (screenX - panStartX) * DPR;
+    viewOffsetY += (screenY - panStartY) * DPR;
+    panStartX = screenX;
+    panStartY = screenY;
+    draw();
+  }
+}
+
+function handleEnd(screenX, screenY) {
+  // If tap displacement was below threshold, execute toggle switch state change
+  if (!isSwipeDrag && selectedNode && selectedNode.k === 'IN') {
+    selectedNode.state = !selectedNode.state;
+    saveHistoryState();
+    sim();
+    draw();
+  }
+  drag = null;
+}
+
+// Property Editor Controller
+const propEditor = $('propEditor');
+const propLabel = $('propLabel');
+const propValue = $('propValue');
+const valPropContainer = $('valPropContainer');
+
+function openPropEditor(node) {
+  propLabel.value = node.label || '';
+  if (node.k === 'RESISTOR' || node.k === 'CAPACITOR' || node.k === 'V_SRC') {
+    valPropContainer.style.display = 'flex';
+    propValue.value = node.val || '';
+  } else {
+    valPropContainer.style.display = 'none';
+  }
+  propEditor.style.display = 'flex';
+}
+
+function closePropEditor() {
+  propEditor.style.display = 'none';
+}
+
+// Input values validation
+$('closeEditorBtn').onclick = () => {
+  if (selectedNode) {
+    selectedNode.label = propLabel.value;
+    if (selectedNode.k === 'RESISTOR' || selectedNode.k === 'CAPACITOR' || selectedNode.k === 'V_SRC') {
+      let rawVal = propValue.value.trim();
+      const pattern = /^[0-9]+(?:\.[0-9]+)?[kmunpvV]?$/i;
+      if (pattern.test(rawVal)) {
+        selectedNode.val = rawVal;
+      } else {
+        alert("Invalid component value format. Please enter numerical formats with multipliers (e.g. 10k, 5V, 100u).");
+      }
+    }
+    saveHistoryState();
+    sim();
+    draw();
+  }
+  closePropEditor();
+};
+
+// Touch and Mouse Input Mapping Events
+cv.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.button === 2) {
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    return;
+  }
+  const [worldX, worldY] = transformCoords(e.clientX, e.clientY);
+  handleStart(worldX, worldY, e.clientX, e.clientY);
+});
+
+cv.addEventListener('mousemove', e => {
+  const [worldX, worldY] = transformCoords(e.clientX, e.clientY);
+  handleMove(worldX, worldY, e.clientX, e.clientY);
+});
+
+cv.addEventListener('mouseup', e => {
+  if (e.button === 1 || e.button === 2) {
+    isPanning = false;
+    return;
+  }
+  handleEnd(e.clientX, e.clientY);
+});
+
+// Touch mapping (Pinch-to-zoom and Panning multi-touches)
+let ongoingTouches = {};
+let startDist = 0;
+let startScale = 1.0;
+
+cv.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const [worldX, worldY] = transformCoords(t.clientX, t.clientY);
+    handleStart(worldX, worldY, t.clientX, t.clientY);
+  } else if (e.touches.length === 2) {
+    isPanning = true;
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    startDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    startScale = viewScale;
+    panStartX = (t1.clientX + t2.clientX) / 2;
+    panStartY = (t1.clientY + t2.clientY) / 2;
+  }
+}, {passive:false});
+
+cv.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const [worldX, worldY] = transformCoords(t.clientX, t.clientY);
+    handleMove(worldX, worldY, t.clientX, t.clientY);
+  } else if (e.touches.length === 2) {
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    
+    // Zoom and pan anchored on pinch midpoint!
+    const midX = (t1.clientX + t2.clientX) / 2;
+    const midY = (t1.clientY + t2.clientY) / 2;
+    const [worldMidX, worldMidY] = transformCoords(midX, midY);
+
+    const curDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    let newScale = startScale * (curDist / startDist);
+    newScale = Math.max(0.2, Math.min(newScale, 4.0)); // Zoom limit constraints
+    
+    viewScale = newScale;
+    viewOffsetX = midX * DPR - worldMidX * viewScale;
+    viewOffsetY = midY * DPR - worldMidY * viewScale;
+
+    panStartX = midX;
+    panStartY = midY;
+    draw();
+  }
+}, {passive:false});
+
+cv.addEventListener('touchend', e => {
+  e.preventDefault();
+  isPanning = false;
+  handleEnd(0, 0);
+}, {passive:false});
+
+// Wheel Scaling anchored on current mouse coordinates!
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [worldX, worldY] = transformCoords(e.clientX, e.clientY);
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+  let newScale = viewScale * zoomFactor;
+  newScale = Math.max(0.2, Math.min(newScale, 4.0));
+  
+  viewScale = newScale;
+  viewOffsetX = e.clientX * DPR - worldX * viewScale;
+  viewOffsetY = e.clientY * DPR - worldY * viewScale;
+  draw();
+}, {passive:false});
+
+// WINDOW-LEVEL failsafe pointers release (STEP 6)
+window.addEventListener('mouseup', () => {
+  drag = null;
+  isPanning = false;
+});
+window.addEventListener('touchend', () => {
+  drag = null;
+  isPanning = false;
+});
+window.addEventListener('touchcancel', () => {
+  drag = null;
+  isPanning = false;
+});
+
+// Floating delete button visual tracker
+const delBtn = $('floatingDeleteBtn');
+function showDeleteBtn(n) {
+  delBtn.style.left = `${(n.x * viewScale + viewOffsetX) / DPR + (COMP_SZ * viewScale) / DPR - 10}px`;
+  delBtn.style.top = `${(n.y * viewScale + viewOffsetY) / DPR - 15}px`;
+  delBtn.style.display = 'block';
+}
+function hideDeleteBtn() {
+  delBtn.style.display = 'none';
+}
+
+function executeDeletion() {
+  if (selectedNode) {
+    nodes = nodes.filter(x => x !== selectedNode);
+    wires = wires.filter(w => w.from !== selectedNode.id && w.to !== selectedNode.id);
+    selectedNode = null;
+    hideDeleteBtn();
+    closePropEditor();
+    saveHistoryState();
+    sim();
+    draw();
+  } else if (selectedWire) {
+    wires = wires.filter(w => w !== selectedWire);
+    selectedWire = null;
+    saveHistoryState();
+    sim();
+    draw();
+  }
+}
+delBtn.onclick = executeDeletion;
+
+// Mode Switching & Help Modal Controllers
+const wireModeBtn = $('wireModeBtn');
+const modeBadge = $('modeBadge');
+const statusText = $('statusText');
+
+wireModeBtn.onclick = () => {
+  isWireMode = !isWireMode;
+  selectedPin = null;
+  hoveredPin = null;
+  if (isWireMode) {
+    wireModeBtn.classList.add('active');
+    wireModeBtn.textContent = "🔗 Wire Mode: ON";
+    modeBadge.textContent = "WIRE MODE";
+    statusText.textContent = "Step-by-Step linkage: Tap start pin, then tap target endpoint pin!";
+  } else {
+    wireModeBtn.classList.remove('active');
+    wireModeBtn.textContent = "🔗 Wire Mode: Off";
+    modeBadge.textContent = "SELECT MODE";
+    statusText.textContent = "Drag components smoothly. Tap switches to toggle states.";
+  }
+  draw();
+};
+
+document.querySelectorAll('.pitem').forEach(b => {
+  b.onclick = () => {
+    // Spawn centered inside current workspace view offset coordinate viewport
+    const x = (-viewOffsetX + W/2 - COMP_SZ/2) / viewScale;
+    const y = (-viewOffsetY + H/2 - COMP_SZ/2) / viewScale;
+    addNode(b.dataset.k, x, y);
+    saveHistoryState(); // Save state only after manual workspace additions!
+  };
+});
+
+// Sidebar search and filter (STEP 6)
+$('sidebarSearch').oninput = e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.pitem').forEach(btn => {
+    const text = btn.textContent.toLowerCase();
+    btn.style.display = text.includes(q) ? 'flex' : 'none';
+  });
+};
+
+// Oscilloscope waveforms monitor
+function updateOscilloscope() {
+  const outputs = nodes.filter(n => n.k === 'OUT');
+  if (!outputs.length) {
+    gctx.clearRect(0,0,graphCv.width,graphCv.height);
+    gctx.fillStyle = COLOR_TEXT_3;
+    gctx.font = '10px JetBrains Mono';
+    gctx.fillText("Log output signals to track waveforms", 15, 25);
+    return;
+  }
+
+  const sample = { time: Date.now(), values: {} };
+  outputs.forEach(o => { sample.values[o.label] = o.state; });
+  waveData.push(sample);
+  if (waveData.length > MAX_SAMPLES) waveData.shift();
+
+  gctx.clearRect(0,0,graphCv.width,graphCv.height);
+  const padding = 15;
+  const trackH = (graphCv.height - padding*2) / outputs.length;
+
+  outputs.forEach((o, index) => {
+    const yBaseline = padding + trackH * (index + 1) - 6;
+    
+    gctx.strokeStyle = '#151a22';
+    gctx.lineWidth = 1;
+    gctx.beginPath();
+    gctx.moveTo(padding, yBaseline);gctx.lineTo(graphCv.width - padding, yBaseline);
+    gctx.stroke();
+
+    gctx.fillStyle = COLOR_TEXT_2;
+    gctx.font = '9px JetBrains Mono';
+    gctx.fillText(o.label, 8, yBaseline - 10);
+
+    gctx.strokeStyle = index % 2 === 0 ? COLOR_HI : COLOR_VOLT;
+    gctx.lineWidth = 2;
+    gctx.beginPath();
+
+    const dx = (graphCv.width - padding*2) / MAX_SAMPLES;
+    for (let i = 0; i < waveData.length; i++) {
+      const state = waveData[i].values[o.label] || false;
+      const x = padding + i * dx;
+      const y = yBaseline - (state ? 14 : 0);
+      if (i === 0) gctx.moveTo(x, y);
+      else {
+        const prev = waveData[i-1].values[o.label] || false;
+        if (prev !== state) {
+          gctx.lineTo(x, yBaseline - (prev ? 14 : 0));
+        }
+        gctx.lineTo(x, y);
+      }
+    }
+    gctx.stroke();
+  });
+}
+
+// Clock ticks
+setInterval(() => {
+  nodes.filter(n => n.k === 'CLOCK').forEach(c => { c.state = !c.state; });
+  sim();
+  updateOscilloscope();
+}, 500);
+
+// Templates
+$('demoAdderBtn').onclick = () => {
+  nodes = []; wires = []; nid = 1; waveData = [];
+  addNode('IN', 40, 50); 
+  addNode('IN', 40, 150); 
+  addNode('XOR', 180, 50); 
+  addNode('AND', 180, 150); 
+  addNode('OUT', 340, 50); 
+  addNode('OUT', 340, 150); 
+
+  wires = [
+    { from: 1, fi: 0, to: 3, ti: 0 },
+    { from: 2, fi: 0, to: 3, ti: 1 },
+    { from: 1, fi: 0, to: 4, ti: 0 },
+    { from: 2, fi: 0, to: 4, ti: 1 },
+    { from: 3, fi: 2, to: 5, ti: 0 },
+    { from: 4, fi: 2, to: 6, ti: 0 }
+  ];
+  saveHistoryState(); // Save state only after full template loading completes!
+  sim();
+  fitToView(); // Auto fit template on load!
+  statusText.textContent = "Half Adder loaded! ✓";
+};
+
+$('demoCMOSBtn').onclick = () => {
+  nodes = []; wires = []; nid = 1; waveData = [];
+  addNode('V_SRC', 40, 60); 
+  addNode('PMOS', 160, 40); 
+  addNode('NMOS', 160, 150); 
+  addNode('GND', 40, 180); 
+  addNode('IN', 40, 280); 
+  addNode('OUT', 320, 100); 
+
+  wires = [
+    { from: 5, fi: 0, to: 2, ti: 0 }, 
+    { from: 5, fi: 0, to: 3, ti: 0 },
+    { from: 1, fi: 0, to: 2, ti: 2 }, 
+    { from: 4, fi: 0, to: 3, ti: 2 }, 
+    { from: 2, fi: 1, to: 6, ti: 0 }, 
+    { from: 3, fi: 1, to: 6, ti: 0 }
+  ];
+  saveHistoryState();
+  sim();
+  fitToView(); // Auto fit template on load!
+  statusText.textContent = "CMOS Inverter loaded! ✓";
+};
+
+$('demoLatchBtn').onclick = () => {
+  nodes = []; wires = []; nid = 1; waveData = [];
+  addNode('IN', 40, 40); 
+  addNode('IN', 40, 200); 
+  addNode('NOT', 180, 50); 
+  addNode('NOT', 180, 190); 
+  addNode('OUT', 320, 50); 
+  addNode('OUT', 320, 190); 
+
+  wires = [
+    { from: 1, fi: 0, to: 3, ti: 0 },
+    { from: 2, fi: 0, to: 4, ti: 0 },
+    { from: 3, fi: 1, to: 5, ti: 0 },
+    { from: 4, fi: 1, to: 6, ti: 0 }
+  ];
+  saveHistoryState();
+  sim();
+  fitToView(); // Auto fit template on load!
+  statusText.textContent = "SR Latch loaded! ✓";
+};
+
+$('clearBtn').onclick = () => { 
+  nodes = []; wires = []; nid = 1; waveData = []; selectedPin = null; hideDeleteBtn(); 
+  saveHistoryState();
+  draw();
+};
+
+// CAD Serialization Schematics Imports/Exports
+$('saveBtn').onclick = () => {
+  const jsonStr = JSON.stringify({ nodes, wires, nid });
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'voltlab_schematic.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const fileInput = $('fileInput');
+$('loadBtn').onclick = () => { fileInput.click(); };
+fileInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (data.nodes && data.wires) {
+        nodes = data.nodes;
+        wires = data.wires;
+        nid = data.nid || 1;
+        saveHistoryState();
+        sim();
+        draw();
+        statusText.textContent = "Schematic layout imported successfully! ✓";
+      }
+    } catch(err) {
+      alert("Invalid VoltSPICE schematic JSON file.");
+    }
+  };
+  reader.readAsText(file);
+};
+
+// Wave data CSV Exporter
+$('exportCsvBtn').onclick = () => {
+  if (waveData.length === 0) {
+    alert("No logged oscilloscope trace signals to export.");
+    return;
+  }
+  const outputs = nodes.filter(n => n.k === 'OUT');
+  let csvContent = "Time," + outputs.map(o => o.label).join(",") + "\n";
+  waveData.forEach(row => {
+    csvContent += row.time + "," + outputs.map(o => row.values[o.label] ? "1" : "0").join(",") + "\n";
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'oscilloscope_trace.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Keyboard Hotkey Shortcuts
+window.addEventListener('keydown', e => {
+  const activeInput = document.activeElement;
+  if (activeInput && (activeInput.tagName === 'INPUT' || activeInput.tagName === 'TEXTAREA')) {
+    return; // Don't intercept typing in properties input fields
+  }
+
+  // Ctrl+Z / Ctrl+Y Undo Redo hooks
+  if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    undo();
+  }
+  if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    redo();
+  }
+
+  // Escape key cancels selections
+  if (e.key === 'Escape') {
+    selectedPin = null;
+    selectedWire = null;
+    selectedNode = null;
+    hideDeleteBtn();
+    closePropEditor();
+    draw();
+  }
+
+  // Delete key deletes selected elements
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    executeDeletion();
+  }
+
+  // Ctrl+D duplicates selectedNode
+  if (e.ctrlKey && e.key.toLowerCase() === 'd' && selectedNode) {
+    e.preventDefault();
+    const copy = addNode(selectedNode.k, selectedNode.x + 24, selectedNode.y + 24);
+    copy.val = selectedNode.val || '';
+    copy.rotation = selectedNode.rotation || 0;
+    saveHistoryState();
+    draw();
+  }
+
+  // Rotate Key Shortcut 'R'
+  if (e.key.toLowerCase() === 'r' && selectedNode) {
+    selectedNode.rotation = ((selectedNode.rotation || 0) + 90) % 360;
+    saveHistoryState();
+    sim();
+    draw();
+  }
+
+  // F Key Shortcut for Fit View (STEP 4)
+  if (e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    fitToView();
+  }
+});
+
+function fit() {
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  
+  const rect = cv.parentNode.getBoundingClientRect();
+  W = cv.width = rect.width * DPR;
+  H = cv.height = rect.height * DPR;
+  cv.style.width = rect.width + 'px';
+  cv.style.height = rect.height + 'px';
+
+  const grect = graphCv.parentNode.getBoundingClientRect();
+  graphCv.width = grect.width * DPR;
+  graphCv.height = grect.height * DPR;
+  graphCv.style.width = grect.width + 'px';
+  graphCv.style.height = grect.height + 'px';
+  
+  minimapCv.width = 120 * DPR;
+  minimapCv.height = 90 * DPR;
+}
+
+$('undoBtn').onclick = undo;
+$('redoBtn').onclick = redo;
+$('fitViewBtn').onclick = fitToView;
+
+$('zoomInBtn').onclick = () => { 
+  // Anchor zoom centered on view canvas origin bounds
+  const worldX = (-viewOffsetX + W/2) / viewScale;
+  const worldY = (-viewOffsetY + H/2) / viewScale;
+  viewScale = Math.min(4.0, viewScale * 1.2);
+  viewOffsetX = W/2 - worldX * viewScale;
+  viewOffsetY = H/2 - worldY * viewScale;
+  draw();
+};
+$('zoomOutBtn').onclick = () => { 
+  const worldX = (-viewOffsetX + W/2) / viewScale;
+  const worldY = (-viewOffsetY + H/2) / viewScale;
+  viewScale = Math.max(0.2, viewScale / 1.2);
+  viewOffsetX = W/2 - worldX * viewScale;
+  viewOffsetY = H/2 - worldY * viewScale;
+  draw();
+};
+
+// Help Modals
+const helpModal = $('helpModal');
+$('helpBtn').onclick = () => { helpModal.style.display = 'flex'; };
+$('closeHelpBtn').onclick = () => { helpModal.style.display = 'none'; };
+
+// Initial layout rendering
 fit();
-if(!load())$('demoBtn').click();
-sim();
-(function loop(){draw();requestAnimationFrame(loop);})();
-</script></body></html>
+window.addEventListener('resize', fit);
+saveHistoryState();
+$('demoCMOSBtn').click();
+
+(function loop(){
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1bb48e93db5edd1',t:'MTc4NDE0NDkwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
